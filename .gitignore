@@ -1,3 +1,6 @@
 data
 .venv
 *.lock
+__pycache__
+output
+models
