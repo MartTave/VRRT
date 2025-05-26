@@ -1,0 +1,17 @@
+[project]
+name = "project"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "easyocr>=1.7.2",
+    "lap>=0.5.12",
+    "opencv-python>=4.11.0.86",
+    "ultralytics>=8.3.143",
+]
+
+[dependency-groups]
+dev = [
+    "ipdb>=0.13.13",
+]
