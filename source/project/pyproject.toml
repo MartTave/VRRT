@@ -5,8 +5,8 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "easyocr>=1.7.2",
     "lap>=0.5.12",
+    "opencv-contrib-python>=4.11.0.86",
     "opencv-python>=4.11.0.86",
     "ultralytics>=8.3.143",
 ]
@@ -14,4 +14,13 @@ dependencies = [
 [dependency-groups]
 dev = [
     "ipdb>=0.13.13",
+]
+easyocr = [
+    "imageio>=2.37.0",
+    "lazy-loader>=0.4",
+    "ninja>=1.11.1.4",
+    "python-bidi>=0.6.6",
+    "scikit-image>=0.25.2",
+    "shapely>=2.1.1",
+    "tifffile>=2025.5.24",
 ]

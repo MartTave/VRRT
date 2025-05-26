@@ -1,0 +1,95 @@
+from abc import ABC, abstractmethod
+from typing import override
+import re
+import easyocr
+from .tools import get_colored_logger
+
+
+logger = get_colored_logger(__name__)
+
+class BibReader(ABC):
+
+    @abstractmethod
+    def read_frame(self, frame)->str|None:
+        pass
+
+
+
+
+class EasyOCR(BibReader):
+
+    class Bib:
+        bib_text:str
+        curr_conf:float=.0
+        conf_tresh:float
+        detected:bool = False
+
+
+
+        def __init__(self, bib_text, conf_tresh=1.5):
+            self.bib_text = bib_text
+            self.conf_tresh = conf_tresh
+
+        def new_detection(self, conf):
+            logger.debug(f"New detection for bib : {self.bib_text}")
+            self.curr_conf += conf
+            if self.curr_conf > self.conf_tresh and self.detected is False:
+                self.detected = True
+                logger.info(f"Valid new bib : {self.bib_text}")
+                return self.bib_text
+
+    conf_treshold:float
+    reader:easyocr.Reader
+    accepted_chars:str
+    bib_regx = re.compile("^[0-9]{1,4}([.][0-9]{1,3})?$") # Match on <NUMBER> and <NUMBER.N>
+
+    detected_bibs:dict[str, Bib] = {}
+
+    def __init__(self, lang=["en"], conf_treshold=0.2, accepted_chars="1234567890."):
+        self.accepted_chars = accepted_chars
+        self.conf_treshold = conf_treshold
+        self.reader = easyocr.Reader(lang)
+
+    def bib_text_preprocess(self, bib_txt:str):
+        bib_txt = bib_txt.strip()
+        result = ""
+        for c in bib_txt:
+            if c in self.accepted_chars:
+                result += c
+        return result
+
+    def validate_bib_text(self, bib_text)->str|bool:
+        match = re.match(self.bib_regx, bib_text)
+        if match is None:
+            return False
+
+        return bib_text
+
+    @override
+    def read_frame(self, frame) -> str | None:
+        res = self.reader.readtext(frame)
+        if len(res) == 0:
+            logger.debug("No text detected in bib, ignoring")
+            return None
+        elif len(res) > 1:
+            logger.debug("Multiple text detected for single bib, ignoring...")
+            return None
+        r = res[0]
+        if r[2] < self.conf_treshold:
+            logger.debug("Not high enough confidence, ignoring...")
+            return None
+
+        detected_text = self.bib_text_preprocess(r[1])
+        bib_text = self.validate_bib_text(detected_text)
+
+        if bib_text is False:
+            logger.debug(f"Bib text is not valid : {r[1]} transformed into {detected_text}")
+            return None
+
+        if bib_text not in self.detected_bibs:
+            self.detected_bibs[bib_text] = EasyOCR.Bib(bib_text)
+
+        self.detected_bibs[bib_text].new_detection(r[2])
+
+        if self.detected_bibs[bib_text].detected:
+            return self.detected_bibs[bib_text].bib_text
