@@ -30,8 +30,7 @@ class Pipeline:
         annoted_frame = annotate_box(annoted_frame, person_result.boxes)
         for i, pers in enumerate(person_result.boxes.xyxy):
             cropped_person = frame[pers[1].int():pers[3].int(), pers[0].int():pers[2].int()].copy()
-            import ipdb;ipdb.set_trace()
-            bib_result = self.bib_detector.detect_bib(cropped_person, person_result.boxes.id[i])
+            bib_result = self.bib_detector.detect_bib(cropped_person)
             if bib_result is not None:
                 annoted_frame = annotate_box(annoted_frame, bib_result.boxes, basepoint=(pers[0], pers[1]), color=(0, 255, 0))
                 for bib in bib_result.boxes.xyxy:

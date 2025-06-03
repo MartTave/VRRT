@@ -95,8 +95,8 @@ if __name__ == "__main__":
         shared_parser = argparse.ArgumentParser(add_help=False)
         shared_parser.add_argument("--camera", type=int, help="The camera stream to capture", required=True)
         shared_parser.add_argument("--fps", type=int, help="The FPS at which to capture the stream", default=30)
-        shared_parser.add_argument("--width", type=int, help="The width of the frame to capture", default=1920)
-        shared_parser.add_argument("--height", type=int, help="The height of the frame to capture", default=1080)
+        shared_parser.add_argument("--width", type=int, help="The width of the frame to capture", default=640)
+        shared_parser.add_argument("--height", type=int, help="The height of the frame to capture", default=480)
 
         # Main parser (top-level)
         main_parser = argparse.ArgumentParser()
