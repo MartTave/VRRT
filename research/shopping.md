@@ -13,6 +13,7 @@ Good comparaison [here](https://blog.arducam.com/usb-board-cameras-uvc-modules-w
 - May be what we want, need to check compatibility with camera [here](https://www.thingiverse.com/thing:6509827)
 - Or [That](https://www.dramaticcat.com/diy/modular-stereo-bar)
 - Or even [that](https://www.thingiverse.com/thing:4265719) for that matter
+- [This](https://www.stlfinder.com/model/logitech-c920-stereo-camera-housing-qfBZsL7h/675284) seems perfect ? 
 
 
 Do we even need stereo after all ? [Link](https://huggingface.co/apple/DepthPro)
