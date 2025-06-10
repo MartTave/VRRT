@@ -71,7 +71,17 @@ def calibrate_from_pics(path, save_results=True):
 
         charuco_ids = cast(MatLike, charuco_ids)
 
-        obj_points, img_points = board.matchImagePoints(charuco_corners, charuco_ids)
+        try:
+            obj_points, img_points = board.matchImagePoints(charuco_corners, charuco_ids)
+
+        except:
+            print("No arcuo detected in this pics !")
+            cv2.imshow("frame", img)
+            while True:
+                key = cv2.waitKey(1)
+                if key == ord("q"):
+                    break
+            raise Exception("uh oh")
 
         return charuco_corners, cast(MatLike, charuco_ids), obj_points, img_points
 
@@ -120,6 +130,11 @@ def calibrate_from_pics(path, save_results=True):
         left_img = cv2.imread(left, cv2.IMREAD_GRAYSCALE)
         right_img = cv2.imread(right, cv2.IMREAD_GRAYSCALE)
 
+        size = (1280, 720)
+
+        left_img = cv2.resize(left_img, size)
+        right_img = cv2.resize(right_img, size)
+
         if img_size is None:
             img_size = left_img.shape[:2]
             print(f"Image size is : {img_size[0]}x{img_size[1]}")
@@ -137,6 +152,10 @@ def calibrate_from_pics(path, save_results=True):
         common_corners_left, common_corners_right, common_ids = get_common_corners(left_corners, left_ids, right_corners, right_ids)
 
         assert len(common_corners_right) == len(common_corners_left) and len(common_corners_right) == len(common_ids)
+
+        if len(common_corners_right) < 4:
+            print("Removed pic, not enough points for stereo calibration")
+            continue
 
         left_obj_points, left_img_points = board.matchImagePoints(cast(Sequence[MatLike], common_corners_left), common_ids)
 
@@ -225,6 +244,10 @@ def calibrate_from_pics(path, save_results=True):
             E=E,
             F=F,
             Q=Q,
+            R1=R1,
+            R2=R2,
+            P1=P1,
+            P2=P2,
             map_left_x=map_left_x,
             map_left_y=map_left_y,
             map_right_x=map_right_x,
