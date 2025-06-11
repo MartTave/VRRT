@@ -1,5 +1,6 @@
 import os
 
+import cv2
 from tqdm import tqdm
 from ultralytics import YOLO
 
@@ -13,9 +14,17 @@ output_label_dir = os.path.join(BASE_FOLDER, "labels_updated")
 
 os.makedirs(output_label_dir, exist_ok=True)
 
+index = 0
+
 for img_name in tqdm(os.listdir(image_dir)):
+    index += 1
     img_path = os.path.join(image_dir, img_name)
     results = model(img_path, classes=[0], conf=0.3, verbose=False)  # Class 0 = 'person'
+
+    if index % 100 == 0:
+        annoted_img = results[0].plot()
+        cv2.imshow("frame", annoted_img)
+        cv2.waitKey()
 
     # Read existing bib number labels (if any)
     label_name = os.path.splitext(img_name)[0] + ".txt"

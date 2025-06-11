@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+    <body>
+        <h1 id="timer" style="font-size: 72px">00:00:000</h1>
+        <script>
+            const timer = document.getElementById("timer");
+            const startTime = Date.now();
+            setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                const ms = elapsed % 1000;
+                const sec = Math.floor(elapsed / 1000) % 60;
+                const min = Math.floor(elapsed / 60000);
+                timer.textContent = `${min}:${sec.toString().padStart(2, "0")}:${ms.toString().padStart(3, "0")}`;
+            }, 1);
+        </script>
+    </body>
+</html>

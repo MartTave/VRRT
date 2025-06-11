@@ -8,7 +8,7 @@ BASE_FOLDER = "./data/roboflow/train"
 # Paths
 image_dir = os.path.join(BASE_FOLDER, "images")  # Directory containing images
 label_dir = os.path.join(BASE_FOLDER, "labels_updated")  # Directory containing YOLO .txt labels
-output_dir = os.path.join(BASE_FOLDER, "visualized_labels")  # Directory to save visualized images
+output_dir = "./visualized_labels"  # Directory to save visualized images
 os.makedirs(output_dir, exist_ok=True)
 
 # Class names and colors (modify as needed)
@@ -17,6 +17,7 @@ colors = {
     0: (0, 255, 0),  # Green for person
     1: (255, 0, 0),  # Red for bib_number
 }
+
 
 # Process each image
 for img_name in tqdm(os.listdir(image_dir)):
