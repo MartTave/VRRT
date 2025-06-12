@@ -8,6 +8,7 @@ dependencies = [
     "linuxpy>=0.21.0",
     "numpy>=2.2.6",
     "opencv-python>=4.11.0.86",
+    "pygame>=2.6.1",
 ]
 
 [dependency-groups]

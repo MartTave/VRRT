@@ -1,18 +1,26 @@
+import asyncio
 import time
 
 import cv2
 
 
+async def read_frame(cap):
+    _, frame = cap.retrieve()
+    return frame
+
+
 def set_props(cap):
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
     cap.set(cv2.CAP_PROP_FPS, 30)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 360)
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-    cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
-    cap.set(cv2.CAP_PROP_EXPOSURE, 20)
+    # cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
+    # cap.set(cv2.CAP_PROP_EXPOSURE, 20)
 
 
 cap1 = cv2.VideoCapture(2)
-cap2 = cv2.VideoCapture(4)
+cap2 = cv2.VideoCapture(0)
 
 for _ in range(30):
     _, _ = cap1.read()
@@ -29,15 +37,32 @@ for _ in range(30):
 frames1 = []
 
 frames2 = []
-start = time.time()
-for i in range(30 * 1):
-    _, frame1 = cap1.read()
-    _, frame2 = cap2.read()
 
-    frames1.append(frame1)
-    frames2.append(frame2)
 
-print(f"FPS : {(30 * 30) / (time.time() - start)}")
+async def reading():
+    start = time.time()
+    for i in range(30 * 5):
+        # Grab frames ASAP (minimal delay between cameras)
+        before = time.time()
+        cap1.grab()
+        cap2.grab()
+        print(f"Took : {time.time() - before}")
+
+        # Retrieve frames (slightly slower, but grabbed at near-same time)
+        frame1, frame2 = await asyncio.gather(read_frame(cap1), read_frame(cap2))
+        # in_loop = time.time()
+        # _, frame1 = cap1.read()
+        # step1 = time.time()
+        # _, frame2 = cap2.read()
+        # step2 = time.time()
+
+        frames1.append(frame1)
+        frames2.append(frame2)
+        # print(f"Took : {time.time() - in_loop} - {step1 - in_loop} - {step2 - step1}")
+    print(f"FPS : {(30 * 5) / (time.time() - start)}")
+
+
+asyncio.run(reading())
 
 for i in range(0, len(frames1), 10):
     stacked = cv2.hconcat((frames1[i], frames2[i]))

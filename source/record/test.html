@@ -1,17 +1,25 @@
 <!doctype html>
-<html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Current Time with Milliseconds</title>
+        <style></style>
+    </head>
     <body>
-        <h1 id="timer" style="font-size: 72px">00:00:000</h1>
+        <h1 id="clock">Loading...</h1>
+
         <script>
-            const timer = document.getElementById("timer");
-            const startTime = Date.now();
-            setInterval(() => {
-                const elapsed = Date.now() - startTime;
-                const ms = elapsed % 1000;
-                const sec = Math.floor(elapsed / 1000) % 60;
-                const min = Math.floor(elapsed / 60000);
-                timer.textContent = `${min}:${sec.toString().padStart(2, "0")}:${ms.toString().padStart(3, "0")}`;
-            }, 1);
+            function updateClock() {
+                const now = new Date();
+                const timeString =
+                    now.toLocaleTimeString("en-US", { hour12: false }) +
+                    "." +
+                    now.getMilliseconds().toString().padStart(3, "0");
+                document.getElementById("clock").textContent = timeString;
+                requestAnimationFrame(updateClock);
+            }
+
+            updateClock();
         </script>
     </body>
 </html>
