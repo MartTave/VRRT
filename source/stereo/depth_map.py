@@ -20,7 +20,7 @@ def get_depth_map(filename, img_left, img_right):
 
     map_right_x, map_right_y = (file["map_right_x"], file["map_right_y"])
 
-    stereo = cv2.StereoBM.create(numDisparities=512, blockSize=51)
+    stereo = cv2.StereoBM.create(numDisparities=0, blockSize=21)
 
     # stereo = cv2.StereoSGBM.create(
     #     minDisparity=0,
@@ -39,21 +39,21 @@ def get_depth_map(filename, img_left, img_right):
 
     rect_img_right = cv2.remap(img_right, map_right_x, map_right_y, cv2.INTER_LINEAR)
 
-    # resized_left = cv2.resize(rect_img_left, (640, 480))
-    # resized_right = cv2.resize(rect_img_right, (640, 480))
+    resized_left = cv2.resize(rect_img_left, (768, 432))
+    resized_right = cv2.resize(rect_img_right, (768, 432))
 
-    # concat = cv2.hconcat([resized_left, resized_right])
-    # for i in range(0, 480, 10):
-    #     color = (255, 0, 0)
-    #     if i % 20 == 0:
-    #         color = (0, 0, 255)
-    #     cv2.line(concat, (0, i), (1280, i), color, 1)
+    concat = cv2.hconcat([resized_left, resized_right])
+    for i in range(0, 480, 10):
+        color = (255, 0, 0)
+        if i % 20 == 0:
+            color = (0, 0, 255)
+        cv2.line(concat, (0, i), (1280, i), color, 1)
 
-    # cv2.imshow("Concat", concat)
-    # while True:
-    #     key = cv2.waitKey(-1)
-    #     if key == ord("q"):
-    #         break
+    cv2.imshow("Concat", concat)
+    while True:
+        key = cv2.waitKey(-1)
+        if key == ord("q"):
+            break
 
     disparity = stereo.compute(rect_img_left, rect_img_right)
 
@@ -117,7 +117,6 @@ def depth_map(filename):
 
     nothing = lambda x: None
 
-
     cv2.createTrackbar("NumDisparities", "Disparity Map", 1, 50, nothing)
     cv2.createTrackbar("BlockSize", "Disparity Map", 5, 50, nothing)
 
@@ -131,9 +130,7 @@ def depth_map(filename):
     assert ret_left
     assert ret_right
 
-    stereo_left = cv2.StereoBM.create(
-        numDisparities=32, blockSize=7
-    )
+    stereo_left = cv2.StereoBM.create(numDisparities=32, blockSize=7)
     filter = cv2.ximgproc.DisparityWLSFilter(matcher_left=stereo_left)
     right_matcher = cv2.ximgproc.createRightMatcher(stereo_left)
 
@@ -156,7 +153,6 @@ def depth_map(filename):
         # Extract depth map (Z coordinate)
         curr_depth = points_3D[:, :, 2]
 
-
         disparity_left = filter.filter(disparity_left, img_left, None, disparity_right)
 
         disparity_vis = cv2.normalize(disparity_left, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)  # type: ignore
@@ -172,7 +168,7 @@ def depth_map(filename):
         pass
 
 
-img1 = cv2.imread("./data/pics/stereo/left_0.png")
-img2 = cv2.imread("./data/pics/stereo/right_0.png")
+img1 = cv2.imread("./data/pics/stereo/left_30.png")
+img2 = cv2.imread("./data/pics/stereo/right_30.png")
 
-depth_map("calib_2.npz")
+get_depth_map("calib_1.npz", img1, img2)

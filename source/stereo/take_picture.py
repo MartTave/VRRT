@@ -73,8 +73,8 @@ while True:
         raise Exception(f"Something went wrong during frame capture. Left : {ret_left} right: {ret_right}")
 
     # Combine the frames horizontally
-    resized_left = cv.resize(frame_left, (640, 480))
-    resized_right = cv.resize(frame_right, (640, 480))
+    resized_left = cv.resize(frame_left, (768, 432))
+    resized_right = cv.resize(frame_right, (768, 432))
     combined = cv.hconcat([resized_left, resized_right])
 
     # Display the combined frame
