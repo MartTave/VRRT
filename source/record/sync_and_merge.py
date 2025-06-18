@@ -1,0 +1,152 @@
+import csv
+import glob
+import os
+
+import cv2
+import numpy as np
+
+LEFT_VIDEOS = "../annotate/data_1"
+RIGHT_VIDEOS = "../annotate/data_2"
+
+
+OUTPUT_FOLDER = "./merged"
+
+CALIBRATIONS = "./calib_14.06.npz"
+
+left_videos = list(sorted(glob.glob(os.path.join(LEFT_VIDEOS, "video_*.mp4"))))
+right_videos = list(sorted(glob.glob(os.path.join(RIGHT_VIDEOS, "video_*.mp4"))))
+
+
+def build_merged_timstamp():
+    left_text = list(sorted(glob.glob(os.path.join(LEFT_VIDEOS, "video_*.txt"))))
+
+    right_text = list(sorted(glob.glob(os.path.join(RIGHT_VIDEOS, "video_*.txt"))))
+
+    def concat_timestamps(files):
+        index = 0
+        res = []
+        for f in files:
+            video_filename = f.replace(".txt", ".mp4")
+            with open(f) as file:
+                lines = file.readlines()
+                for l in lines:
+                    splitted = l.split(";")
+                    res.append(f"{int(splitted[0])};{float(splitted[1])};{video_filename}\n")
+                index += len(lines)
+            print(f"Done : {f}")
+        return res
+
+    with open(OUTPUT_FOLDER + "/left_merged.csv", "w") as f:
+        f.writelines(concat_timestamps(left_text))
+
+    with open(OUTPUT_FOLDER + "/right_merged.csv", "w") as f:
+        f.writelines(concat_timestamps(right_text))
+
+
+left_index = 0
+right_index = 0
+
+
+def create_synced_timestamps():
+    with open(OUTPUT_FOLDER + "/left_merged.csv", "r") as left_file:
+        with open(OUTPUT_FOLDER + "/right_merged.csv", "r") as right_file:
+            with open(OUTPUT_FOLDER + "/synced.csv", "w") as out_file:
+                out_file.write("left_frame_n;left_filename;left_timestamp;right_frame_n;right_filename;right_timestamp;timestamp_diff\n")
+                left_lines = left_file.readlines()
+                right_lines = right_file.readlines()
+                max_diff = 1 / 30 / 2
+                global left_index
+                global right_index
+
+                def sync_timestamp():
+                    global left_index
+                    global right_index
+                    left_timestamp = float(left_lines[left_index].split(";")[1])
+                    right_timestamp = float(right_lines[right_index].split(";")[1])
+                    diff = abs(left_timestamp - right_timestamp)
+                    if diff > max_diff:
+                        # We can find a better timestamp
+                        if left_timestamp < right_timestamp:
+                            left_index += 1
+                        else:
+                            right_index += 1
+                        print("Timestamps not in sync, trying to sync !")
+                        return False
+                    else:
+                        # we consider that "in sync"
+                        return True
+
+                while True:
+                    print(f"{left_index} - {right_index}")
+                    if left_index >= len(left_lines):
+                        break
+                    if right_index >= len(right_lines):
+                        break
+                    if sync_timestamp():
+                        left_line = left_lines[left_index].replace("\n", "").split(";")
+                        right_line = right_lines[right_index].replace("\n", "").split(";")
+                        left_frame_n = left_line[0]
+                        right_frame_n = right_line[0]
+                        left_filename = left_line[2]
+                        right_filename = right_line[2]
+                        left_timestamp = float(left_line[1])
+                        right_timestamp = float(right_line[1])
+                        timestamp_diff = abs(left_timestamp - right_timestamp)
+                        left_index += 1
+                        right_index += 1
+                        out_file.write(
+                            f"{left_frame_n};{left_filename};{left_timestamp};{right_frame_n};{right_filename};{right_timestamp};{timestamp_diff}\n"
+                        )
+
+
+captures = {"l": [None, None], "r": [None, None]}
+
+curr_frames = {"l": 1, "r": 1}
+
+
+def merge_videos():
+    global captures
+    calib_file = np.load(CALIBRATIONS)
+
+    map_left_x, map_left_y = (calib_file["map_left_x"], calib_file["map_left_y"])
+    map_right_x, map_right_y = (calib_file["map_right_x"], calib_file["map_right_y"])
+
+    def get_cap(filename, side) -> cv2.VideoCapture:
+        global captures
+        assert side == "l" or side == "r"
+        if captures[side][0] != filename:
+            if captures[side][1] is not None:
+                captures[side][1].release()
+            captures[side][1] = cv2.VideoCapture(filename)
+            captures[side][0] = filename
+            curr_frames[side] = 1
+        return captures[side][1]
+
+    def get_frame(filename, side, frame_n):
+        cap = get_cap(filename, side)
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_n)
+        ret, frame = cap.read()
+        if not ret:
+            # Get total frames in video
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            print(f"Error while trying to read file : {filename} at position {frame_n}. Total frame is : {total_frames}")
+            raise Exception("You should not be here...")
+        return frame
+
+    with open(OUTPUT_FOLDER + "/synced.csv", "r") as csvfile:
+        content = csv.DictReader(csvfile, delimiter=";")
+        writter = cv2.VideoWriter(OUTPUT_FOLDER + "/synced.mp4", cv2.VideoWriter_fourcc(*"MJPG"), 30, (1920 * 2, 1080), isColor=True)
+        for i, row in enumerate(content):
+            l_frame = get_frame(row["left_filename"], "l", int(row["left_frame_n"]) - 1)
+            r_frame = get_frame(row["right_filename"], "r", int(row["right_frame_n"]) - 1)
+            rect_img_left = cv2.remap(l_frame, map_left_x, map_left_y, cv2.INTER_LINEAR)
+            rect_img_right = cv2.remap(r_frame, map_right_x, map_right_y, cv2.INTER_LINEAR)
+            stacked = cv2.hconcat((rect_img_left, rect_img_right))
+            writter.write(stacked)
+            print(f"Done frame {i}")
+    writter.release()
+    captures["l"][1].release()
+    captures["r"][1].release()
+
+
+merge_videos()
