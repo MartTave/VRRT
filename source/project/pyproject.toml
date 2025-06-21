@@ -3,11 +3,15 @@ name = "project"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 dependencies = [
-    "lap>=0.5.12",
+    "lap",
     "opencv-contrib-python>=4.11.0.86",
     "opencv-python>=4.11.0.86",
+    "paddleocr>=2.10.0",
+    "pandas>=2.2.3",
+    "pytesseract>=0.3.13",
+    "tdqm>=0.0.1",
     "ultralytics>=8.3.143",
 ]
 
