@@ -4,7 +4,7 @@ import cv2
 from tqdm import tqdm
 from ultralytics import YOLO
 
-model = YOLO("./models/yolo11n.pt")
+model = YOLO("./models/yolo11l.pt")
 
 BASE_FOLDER = "./data/roboflow/train"
 

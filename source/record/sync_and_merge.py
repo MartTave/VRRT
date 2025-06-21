@@ -9,12 +9,35 @@ LEFT_VIDEOS = "../annotate/data_1"
 RIGHT_VIDEOS = "../annotate/data_2"
 
 
-OUTPUT_FOLDER = "./merged"
+OUTPUT_FOLDER = "./records/merged"
 
 CALIBRATIONS = "./calib_14.06.npz"
 
 left_videos = list(sorted(glob.glob(os.path.join(LEFT_VIDEOS, "video_*.mp4"))))
 right_videos = list(sorted(glob.glob(os.path.join(RIGHT_VIDEOS, "video_*.mp4"))))
+
+
+def big_video(video_folder):
+    left_text = list(sorted(glob.glob(os.path.join(video_folder, "video_*.txt"))))
+    left_videos = list(sorted(glob.glob(os.path.join(video_folder, "video_*.mp4"))))
+    global_frame_index = 0
+    with open(OUTPUT_FOLDER + "/merged_2.txt", "w") as outfile:
+        for l_txt, l_vid in zip(left_text, left_videos, strict=False):
+            cap = cv2.VideoCapture(l_vid)
+            print(f"Doing file : {l_vid}")
+            with open(l_txt) as file:
+                lines = file.readlines()
+                curr_file_index = 0
+                while True:
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
+                    curr_line = lines[curr_file_index].split(";")
+                    timestamp = float(curr_line[1])
+                    outfile.write(f"{str(global_frame_index)};{timestamp}\n")
+                    global_frame_index += 1
+                    curr_file_index += 1
+    pass
 
 
 def build_merged_timstamp():
@@ -130,7 +153,7 @@ def merge_videos():
             # Get total frames in video
             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             print(f"Error while trying to read file : {filename} at position {frame_n}. Total frame is : {total_frames}")
-            raise Exception("You should not be here...")
+            return False
         return frame
 
     with open(OUTPUT_FOLDER + "/synced.csv", "r") as csvfile:
@@ -139,6 +162,8 @@ def merge_videos():
         for i, row in enumerate(content):
             l_frame = get_frame(row["left_filename"], "l", int(row["left_frame_n"]) - 1)
             r_frame = get_frame(row["right_filename"], "r", int(row["right_frame_n"]) - 1)
+            if l_frame is False and r_frame is False:
+                continue
             rect_img_left = cv2.remap(l_frame, map_left_x, map_left_y, cv2.INTER_LINEAR)
             rect_img_right = cv2.remap(r_frame, map_right_x, map_right_y, cv2.INTER_LINEAR)
             stacked = cv2.hconcat((rect_img_left, rect_img_right))
@@ -149,4 +174,4 @@ def merge_videos():
     captures["r"][1].release()
 
 
-merge_videos()
+big_video("./records/right")
