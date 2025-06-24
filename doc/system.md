@@ -7,7 +7,14 @@ The first part of the system is the person detector. For this, I had many choice
 
 ## Bib detection
 
+Training of a yolov11 model to detect bib number location in a picture
+
 ## Bib number reading
+
+OCR comparaison :
+tesseract : not done for those type of situation -> very bad
+easyOCR : Usable, but not that cool
+PaddleOCR: Slightly better than easyOCR
 
 ## Race finish timing
 

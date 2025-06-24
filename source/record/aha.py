@@ -2,7 +2,9 @@ import os
 
 dir = "./records/right/"
 
-files = os.listdir(dir)
+files = list(os.listdir(dir))
+
+files.sort()
 
 final_files = [f"file '{dir}{f}'" for f in files if f.endswith(".mp4")]
 
