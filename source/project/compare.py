@@ -3,6 +3,8 @@ import json
 import pandas as pd
 from easyocr.DBNet.DBNet import cv2
 
+impossible_list = ["2003", "2007", "2077", "2018", "2055", "2065", "2103", "2134", "2144", "2149", "2166", "2171", "2172", "2177"]
+
 results_computed = {}
 results = {}
 
@@ -25,28 +27,25 @@ confidences = [v["confidence"] for v in results_computed.values()]
 
 def get_closest_frame(timestamp, arr=df, found_index=0):
     if len(arr) == 1 or len(arr) == 0:
-        return found_index + 100
+        return found_index
     curr_index = len(arr) // 2
-    print(f"Curr index is : {curr_index}")
     if arr[curr_index] > timestamp:
         return get_closest_frame(timestamp, arr[0:curr_index], found_index=found_index)
     elif arr[curr_index] < timestamp:
         return get_closest_frame(timestamp, arr[curr_index:-1], found_index=curr_index + found_index)
     else:
-        return curr_index + found_index + 100
+        return curr_index + found_index
 
 
 def extract_video(offical_time, bib_text, found=False):
-    start = offical_time + 40
-    end = offical_time + 120
+    start = offical_time - 6
+    end = offical_time + 4
     frame_start = get_closest_frame(start)
     frame_end = get_closest_frame(end)
     if frame_start == frame_end:
         return
-    print(f"Frame start : {frame_start} end : {frame_end}")
     cap = cv2.VideoCapture("./data/recorded/merged/right_merged.mp4")
     cap.set(cv2.CAP_PROP_POS_FRAMES, frame_start)
-    print(f"Total frames : {cap.get(cv2.CAP_PROP_FRAME_COUNT)}")
     writer = cv2.VideoWriter(f"./debug/bib/{bib_text}_{'found' if found else 'not_found'}.mp4", cv2.VideoWriter_fourcc(*"mp4v"), 30, (1920, 1080))
     for i in range(frame_start, frame_end):
         ret, frame = cap.read()
@@ -58,21 +57,45 @@ def extract_video(offical_time, bib_text, found=False):
     cap.release()
 
 
+def reconstruct(dict):
+    new_dict = {}
+    for key in dict.keys():
+        curr = dict[key]
+        new_bibs = []
+        for curr_conf, curr_bib in dict[key]["bibs"]:
+            new_conf = curr_conf
+            for conf, bib in dict[key]["bibs"]:
+                if bib != curr_bib and bib in curr_bib:
+                    new_conf += conf
+            new_bibs.append((new_conf, curr_bib))
+        new_bibs.sort(key=lambda x: x[0], reverse=True)
+        new_dict[new_bibs[0][1]] = {
+            "time": curr["time"],
+            "confidence": new_bibs[0][0],
+            "bibs": new_bibs,
+        }
+
+    return new_dict
+
+
+# new_res = reconstruct(results_computed)
+
+# with open("result_reconstructed.json", "w") as file:
+#     file.write(json.dumps(new_res))
+
 max_time = max(times) + 60
 
 min_time = min(times)
 print(min_time)
 print(max_time)
 bib_found = 0
-bib_not_found = 0
+bib_not_found = []
 count = 0
 for key in results_computed.keys():
     if "." in key:
         continue
     if key not in results.keys():
-        print(f"{key} not found in bib list")
         count += 1
-print(f"{count} bib not found in list")
 
 total = 0
 total_found = 0
@@ -94,10 +117,10 @@ for key in results.keys():
         total_found += 1
         # extract_video(results[key], key, found=True)
     else:
-        bib_not_found += 1
-        # extract_video(results[key], key)
-
-    total += 1
+        bib_not_found.append(key)
+        # extract_videso(results[key], key)
+    if key not in impossible_list:
+        total += 1
 
 
 mean_diff /= total_found
@@ -105,7 +128,5 @@ mean_diff /= total_found
 print(f"Min diff: {min_diff} - max diff : {max_diff}")
 print(f"Found {bib_found} of {total} bibs")
 print(f"Mean diff is : {mean_diff}")
-extract_video(1749888808.113506, "2161", found=True)
-import ipdb
-
-ipdb.set_trace()
+print(f"{sorted(bib_not_found)}")
+# extract_video(1749888815.291, "2201", found=True)

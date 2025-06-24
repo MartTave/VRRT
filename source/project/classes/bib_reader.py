@@ -1,9 +1,9 @@
 import re
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import override
 
 import easyocr
+from overrides import override
 from paddleocr import PaddleOCR
 
 from .tools import get_colored_logger

@@ -3,9 +3,8 @@ name = "project"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11, <3.12"
 dependencies = [
-    "lap",
     "opencv-contrib-python>=4.11.0.86",
     "opencv-python>=4.11.0.86",
     "paddleocr>=2.10.0",
@@ -13,18 +12,23 @@ dependencies = [
     "pytesseract>=0.3.13",
     "tdqm>=0.0.1",
     "ultralytics>=8.3.143",
+    "paddlepaddle-gpu==3.0.0",
+    "easyocr>=1.7.2",
+    "overrides>=7.7.0",
+    "numpy==1.26.0",
+    "lap>=0.5.12",
 ]
 
 [dependency-groups]
 dev = [
     "ipdb>=0.13.13",
 ]
-easyocr = [
-    "imageio>=2.37.0",
-    "lazy-loader>=0.4",
-    "ninja>=1.11.1.4",
-    "python-bidi>=0.6.6",
-    "scikit-image>=0.25.2",
-    "shapely>=2.1.1",
-    "tifffile>=2025.5.24",
-]
+
+[tool.uv.sources]
+paddlepaddle-gpu = { index = "paddlepaddle-gpu" }
+torch = { index = "paddlepaddle-gpu" }
+
+[[tool.uv.index]]
+name = "paddlepaddle-gpu"
+url = "https://www.paddlepaddle.org.cn/packages/stable/cu126/"
+explicit = true

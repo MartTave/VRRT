@@ -65,6 +65,10 @@ class Pipeline:
         bib_center_x = (bib_box[0] + bib_box[2]) / 2
         bib_center_y = (bib_box[1] + bib_box[3]) / 2
 
+        if person_boxes.id is None:
+            logger.warning("Did not have an id for tracking !")
+            return False, None
+
         for i, p_box in enumerate(person_boxes.xyxy):
             if (p_box[0] <= bib_center_x <= p_box[2]) and (p_box[1] <= bib_center_y <= p_box[3]):
                 return True, person_boxes.id[i]
@@ -96,3 +100,22 @@ class Pipeline:
                     self.persons[person_id].detected_bib(bib, confidence)
 
         return self.persons
+
+    def new_frames(self, frames, frames_indexes):
+        person_results = self.person_detector.detect_persons_multiple(frames)
+        bib_results = self.bib_detector.detect_bib_multiple(frames)
+        for frame, index, person_res, bib_res in zip(frames, frames_indexes, person_results, bib_results, strict=False):
+            for bib_box in bib_res.boxes.xyxy:
+                res = self.check_bib_in_person(bib_box, person_res.boxes)
+                if res[0]:
+                    person_id = int(res[1])
+                    if person_id is None:
+                        continue
+                    cropped_bib = frame[bib_box[1].int() : bib_box[3].int(), bib_box[0].int() : bib_box[2].int()].copy()
+                    if person_id not in self.persons.keys():
+                        self.persons[person_id] = Person(person_id)
+                    self.persons[person_id].last_detected = index
+                    res = self.bib_reader.read_frame(cropped_bib)
+                    if res is not None:
+                        bib, confidence = res
+                        self.persons[person_id].detected_bib(bib, confidence)

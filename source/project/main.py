@@ -26,27 +26,36 @@ pipeline = Pipeline(
 cap = cv2.VideoCapture("./data/recorded/merged/right_merged.mp4")
 df = pd.read_csv("./data/recorded/merged/right_merged_full.csv", header=None, names=["frame_n", "timestamp"], delimiter=";")
 
-
-global_frame_index = 0
-frame_n = None
-for i in range(100):
-    ret, frame_n = cap.read()
-    global_frame_index += 1
-    assert ret
-
-# cropping_region = click_and_crop(frame_n)
-
 logger.info("Recording started")
-cap.set(cv2.CAP_PROP_POS_FRAMES, 30 * 60 + 150)
-already_detected = []
 frame_limit = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-frame_limit = 50_000
-for i in tqdm(range(0, frame_limit)):
-    ret, frame = cap.read()
-    if not ret:
-        logger.info("End of recording reached")
-        break
-    pipeline.new_frame(frame, i)
+# frame_limit = 150_000
+
+
+def sequential_pipe():
+    for i in tqdm(range(0, frame_limit)):
+        ret, frame = cap.read()
+        if not ret:
+            logger.info("End of recording reached")
+            break
+        pipeline.new_frame(frame, i)
+
+
+def batched_pipe(batch_size=10):
+    for i in tqdm(range(0, frame_limit, batch_size)):
+        frames = []
+        for j in range(batch_size):
+            ret, frame = cap.read()
+            if not ret:
+                logger.info("End of recording reached")
+                break
+            frames.append(frame)
+        pipeline.new_frame(frames, list(range(i, i + batch_size)))
+
+
+try:
+    sequential_pipe()
+except Exception as e:
+    print(f"Error was : {e}")
 
 res = {}
 for p in pipeline.persons.values():
@@ -58,9 +67,6 @@ for p in pipeline.persons.values():
             "bibs": [(b.curr_conf, b.bib_text) for b in p.bibs.values()],
         }
 
-import ipdb
-
-ipdb.set_trace()
 
 with open("results.json", "w") as outfile:
     outfile.write(json.dumps(res))
