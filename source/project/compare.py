@@ -14,7 +14,7 @@ base_df = pd.read_csv("./data/recorded/merged/right_merged_full.csv", delimiter=
 
 df = base_df["timestamp"].array
 
-with open("./results.json", "r") as file:
+with open("./results/results_reconstructed_calypso4.json", "r") as file:
     results_computed = json.loads("\n".join(file.readlines()))
 
 with open("./data/race_results/parsed.json", "r") as file:
@@ -37,7 +37,7 @@ def get_closest_frame(timestamp, arr=df, found_index=0):
         return curr_index + found_index
 
 
-def extract_video(offical_time, bib_text, found=False):
+def extract_video(offical_time, bib_text, anot=""):
     start = offical_time - 6
     end = offical_time + 4
     frame_start = get_closest_frame(start)
@@ -46,7 +46,7 @@ def extract_video(offical_time, bib_text, found=False):
         return
     cap = cv2.VideoCapture("./data/recorded/merged/right_merged.mp4")
     cap.set(cv2.CAP_PROP_POS_FRAMES, frame_start)
-    writer = cv2.VideoWriter(f"./debug/bib/{bib_text}_{'found' if found else 'not_found'}.mp4", cv2.VideoWriter_fourcc(*"mp4v"), 30, (1920, 1080))
+    writer = cv2.VideoWriter(f"./debug/bib/{bib_text}_{anot}.mp4", cv2.VideoWriter_fourcc(*"mp4v"), 30, (1920, 1080))
     for i in range(frame_start, frame_end):
         ret, frame = cap.read()
         if not ret:
@@ -85,6 +85,15 @@ def reconstruct(dict):
 
 max_time = max(times) + 60
 
+to_del_key = []
+
+for key in results_computed.keys():
+    if results_computed[key]["confidence"] < 3:
+        to_del_key.append(key)
+
+for k in to_del_key:
+    del results_computed[k]
+
 min_time = min(times)
 print(min_time)
 print(max_time)
@@ -98,6 +107,7 @@ for key in results_computed.keys():
         count += 1
 
 total = 0
+wrong_detection = []
 total_found = 0
 max_allowed_diff = 60.0
 mean_diff = 0
@@ -109,16 +119,24 @@ for key in results.keys():
     if key in results_computed.keys():
         bib_found += 1
         diff = abs(results_computed[key]["time"] - results[key])
+
+        if diff > 30:
+            # We got a wrong detection...
+            wrong_detection.append(key)
+            extract_video(results[key], key, anot="wrong")
+            extract_video(results_computed[key]["time"], key, anot="right")
+            continue
+
         if min_diff[0] > diff:
             min_diff = diff, key
         elif max_diff[0] < diff:
             max_diff = diff, key
         mean_diff += diff
         total_found += 1
-        # extract_video(results[key], key, found=True)
+        # extract_video(results[key], key, anot="found")
     else:
         bib_not_found.append(key)
-        # extract_videso(results[key], key)
+        # extract_video(results[key], key, anot="not_found")
     if key not in impossible_list:
         total += 1
 
@@ -128,5 +146,6 @@ mean_diff /= total_found
 print(f"Min diff: {min_diff} - max diff : {max_diff}")
 print(f"Found {bib_found} of {total} bibs")
 print(f"Mean diff is : {mean_diff}")
-print(f"{sorted(bib_not_found)}")
+print(f"Wrong detections : {len(wrong_detection)}")
+print(f"wrong detection : {wrong_detection}")
 # extract_video(1749888815.291, "2201", found=True)

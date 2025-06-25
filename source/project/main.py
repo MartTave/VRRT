@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 
@@ -57,14 +58,25 @@ try:
 except Exception as e:
     print(f"Error was : {e}")
 
+
 res = {}
 for p in pipeline.persons.values():
-    if p.best_bib is not None:
-        bib = p.best_bib
-        res[bib.bib_text] = {
+    if len(p.bibs) > 0:
+        new_bibs = []
+        for b in p.bibs.values():
+            curr_conf, curr_bib = b.curr_conf, b.bib_text
+            new_conf = curr_conf
+            for b2 in p.bibs.values():
+                conf, bib = b2.curr_conf, b2.bib_text
+                if bib != curr_bib and bib in curr_bib:
+                    new_conf += conf
+            new_bibs.append((new_conf, curr_bib))
+        new_bibs.sort(key=lambda x: x[0], reverse=True)
+        res[new_bibs[0][1]] = {
             "time": float(df["timestamp"][p.last_detected]),
-            "confidence": bib.curr_conf,
-            "bibs": [(b.curr_conf, b.bib_text) for b in p.bibs.values()],
+            "confidence": new_bibs[0][0],
+            "bibs": new_bibs,
+            "video_timestamp": str(datetime.timedelta(seconds=p.last_detected / 30)),
         }
 
 
