@@ -42,7 +42,7 @@ for encoder in ["vits", "vitb"]:
 
         for f in frames:
             image, (h, w) = model.image2tensor(f)
-            images.append((image, w, h))
+            images.append((image, h, w))
         print("Tensor created !")
         then2 = time.time()
         depths = []

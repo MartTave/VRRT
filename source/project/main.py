@@ -72,6 +72,8 @@ for p in pipeline.persons.values():
                     new_conf += conf
             new_bibs.append((new_conf, curr_bib))
         new_bibs.sort(key=lambda x: x[0], reverse=True)
+        if new_bibs[0][1] in res.keys():
+            print(f"Key: {new_bibs[0][1]} already exists in the result dict")
         res[new_bibs[0][1]] = {
             "time": float(df["timestamp"][p.last_detected]),
             "confidence": new_bibs[0][0],

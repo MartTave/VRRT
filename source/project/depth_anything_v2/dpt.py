@@ -1,3 +1,5 @@
+from time import perf_counter
+
 import cv2
 import torch
 import torch.nn as nn
@@ -7,6 +9,20 @@ from torchvision.transforms import Compose
 from .dinov2 import DINOv2
 from .util.blocks import FeatureFusionBlock, _make_scratch
 from .util.transform import NormalizeImage, PrepareForNet, Resize
+
+
+class Timer:
+    def __init__(self):
+        self.elapsed = 0
+        self.start = 0
+
+    def __enter__(self):
+        self.elapsed = 0
+        self.start = perf_counter()
+        return self
+
+    def __exit__(self, *args):
+        self.elapsed = perf_counter() - self.start
 
 
 def _make_fusion_block(features, use_bn, size=None):
@@ -158,23 +174,30 @@ class DepthAnythingV2(nn.Module):
 
     @torch.no_grad()
     def infer_image(self, raw_image, input_size=(640, 360)):
-        image, (h, w) = self.image2tensor(raw_image, input_size)
+        with Timer() as im2tensor:
+            image, (h, w) = self.image2tensor(raw_image, input_size)
 
-        depth = self.forward(image)
+        with Timer() as infer:
+            depth = self.forward(image)
+        with Timer() as inter:
+            depth = F.interpolate(depth[:, None], (h, w), mode="bilinear", align_corners=True)[0, 0]
+        with Timer() as cpu:
+            result = depth.cpu().numpy()
 
-        depth = F.interpolate(depth[:, None], (h, w), mode="bilinear", align_corners=True)[0, 0]
-
-        return depth.cpu().numpy()
+        print(
+            f"Image 2 tensor : {im2tensor.elapsed:.6f} - Model inference : {infer.elapsed:.6f} - Interpolation : {inter.elapsed:.6f} - GPU to CPU : {cpu.elapsed:.6f}"
+        )
+        return result
 
     @torch.no_grad()
-    def infer_image_cuda(self, image, w, h):
+    def infer_image_cuda(self, image, h, w):
         depth = self.forward(image)
 
         depth = F.interpolate(depth[:, None], (h, w), mode="bilinear", align_corners=True)[0, 0]
 
         return depth.cpu().numpy()
 
-    def image2tensor(self, raw_image, input_size=(640, 360)):
+    def image2tensor(self, raw_image, input_size=(512, 288)):
         h, w = raw_image.shape[:2]
 
         image = cv2.cvtColor(raw_image, cv2.COLOR_BGR2RGB) / 255.0

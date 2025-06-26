@@ -41,8 +41,7 @@ class YOLOv11(PersonDetector):
 
     @override
     def detect_persons_multiple(self, frames) -> list[tuple[list[MatLike], typing.Any] | None]:
-        results = self.model.track(frames, verbose=False, tracker="./trackers/botsort.yaml", persist=True)
-
+        results = self.model.track(frames, verbose=False, tracker="./trackers/botsort.yaml", persist=True, imgsz=(384, 224))
         for r in results:
             r = r[r.boxes.cls == 0]
         return results
