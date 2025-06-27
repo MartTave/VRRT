@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+import cv2
 from cv2.typing import MatLike
 from overrides import override
 from ultralytics import YOLO

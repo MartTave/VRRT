@@ -6,8 +6,7 @@ from tqdm import tqdm
 from classes.person_detector import YOLOv11
 from depth import ArrivalLine, get_arrival_line
 
-detector = YOLOv11("./models/base/yolo12n.pt")
-
+person_detector = YOLOv11("./models/base/yolo12n.pt")
 
 start_frame = 8200
 
@@ -30,16 +29,10 @@ frames = []
 batch = 1
 
 for i in tqdm(range(start_frame, int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), batch)):
-    for j in range(batch):
-        ret, frame = cap.read()
-        if ret:
-            then = time.time()
-            line_detector.load_frame(frame)
-            frames.append(frame)
-    person_result = detector.detect_persons_multiple(frames)
-    boxes = [p.boxes for p in person_result]
+    person_result = person_detector.detect_persons_multiple(frames)
+    p_boxes = [p.boxes for p in person_result]
     then = time.time()
-    results = line_detector.treat_loaded_frames(boxes)
+    results = line_detector.treat_batch(line_detector.load_batch(frames), p_boxes)
     print(f"Took : {time.time() - then}")
     for r in results:
         if len(r) > 0:

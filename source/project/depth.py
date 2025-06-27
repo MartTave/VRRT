@@ -23,34 +23,6 @@ def get_arrival_line(picture):
     window_name = "arrival selection"
     drawed = picture.copy()
 
-    def get_line_pixels(start_point, end_point) -> dict[int, int]:
-        x1, y1 = start_point
-        x2, y2 = end_point
-
-        # Calculate differences
-        dx = x2 - x1
-        dy = y2 - y1
-
-        # Determine the number of steps needed
-        steps = max(abs(dx), abs(dy))
-
-        # Avoid division by zero
-        if steps == 0:
-            return [(x1, y1)]
-
-        # Calculate increments
-        x_inc = dx / steps
-        y_inc = dy / steps
-
-        # Generate all points along the line
-        line_pixels = {}
-        for i in range(steps + 1):
-            x = round(x1 + i * x_inc)
-            y = round(y1 + i * y_inc)
-            line_pixels[x] = y
-
-        return line_pixels
-
     def click_event(event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
             # Add the clicked point to our list
@@ -81,13 +53,13 @@ def get_arrival_line(picture):
             raise Exception("Q pressed, interupting")
         elif key == ord("s"):
             break
-    line = get_line_pixels(points[0], points[1])
     cv2.destroyWindow(window_name)
-    return line
+    assert len(points) == 2
+    return points
 
 
 class ArrivalLine:
-    def __init__(self, line: dict[int, int], encoder="vits", reversed=False, min_slope=1e-2):
+    def __init__(self, line: tuple[int, int], encoder="vits", reversed=False, min_slope=1e-2):
         model_configs = {
             "vits": {"encoder": "vits", "features": 64, "out_channels": [48, 96, 192, 384]},
             "vitb": {"encoder": "vitb", "features": 128, "out_channels": [96, 192, 384, 768]},
@@ -102,8 +74,37 @@ class ArrivalLine:
         self.model.to(torch.device(0))
         self.persons_depth = {}
         self.min_slope = min_slope
-        self.line = line
+        self.line = self.get_line_pixels(line)
         pass
+
+    def get_line_pixels(self, points:tuple[int, int]) -> dict[int, int]:
+        start_point, end_point = points
+        x1, y1 = start_point
+        x2, y2 = end_point
+
+        # Calculate differences
+        dx = x2 - x1
+        dy = y2 - y1
+
+        # Determine the number of steps needed
+        steps = max(abs(dx), abs(dy))
+
+        # Avoid division by zero
+        if steps == 0:
+            return [(x1, y1)]
+
+        # Calculate increments
+        x_inc = dx / steps
+        y_inc = dy / steps
+
+        # Generate all points along the line
+        line_pixels = {}
+        for i in range(steps + 1):
+            x = round(x1 + i * x_inc)
+            y = round(y1 + i * y_inc)
+            line_pixels[x] = y
+
+        return line_pixels
 
     def treat_result(self, depth, person_boxes):
         def get_box_center(xyxy):
@@ -143,6 +144,7 @@ class ArrivalLine:
 
     def new_frame(self, frame, person_boxes, annotate=False):
         if person_boxes.id is None:
+            print("No id for person boxes !")
             return []
 
         def get_box_center(xyxy):
@@ -187,7 +189,7 @@ class ArrivalLine:
                     color = (0, 255, 255)
 
             if annotate:
-                cv2.circle(frame, center, 3, color, cv2.FILLED)
+                cv2.circle(frame, center, 7, color, cv2.FILLED)
         if annotate:
             x = sorted(list(self.line.keys()))
             x_start = x[0]
@@ -198,6 +200,18 @@ class ArrivalLine:
     def load_frame(self, frame):
         new_cuda_frame, (h, w) = self.model.image2tensor(frame)
         self.loaded_frames.append((new_cuda_frame, h, w))
+
+    def load_batch(self, frames):
+        cuda_frames, (h, w) = self.model.images2tensor(frames)
+        return cuda_frames, h, w
+
+    def treat_batch(self, cuda_loaded, p_boxes):
+        results = []
+        depths = self.model.infer_images_cuda(*cuda_loaded)
+        for d, p_box in zip(depths, p_boxes):
+            results.append(self.treat_result(d, p_box))
+        return results
+
 
     def treat_loaded_frames(self, person_boxes):
         results = []

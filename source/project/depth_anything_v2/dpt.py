@@ -1,5 +1,5 @@
 from time import perf_counter
-
+import numpy as np
 import cv2
 import torch
 import torch.nn as nn
@@ -173,20 +173,13 @@ class DepthAnythingV2(nn.Module):
         return depth.squeeze(1)
 
     @torch.no_grad()
-    def infer_image(self, raw_image, input_size=(640, 360)):
-        with Timer() as im2tensor:
-            image, (h, w) = self.image2tensor(raw_image, input_size)
+    def infer_image(self, raw_image, input_size=(512, 288)):
+        image, (h, w) = self.image2tensor(raw_image, input_size)
 
-        with Timer() as infer:
-            depth = self.forward(image)
-        with Timer() as inter:
-            depth = F.interpolate(depth[:, None], (h, w), mode="bilinear", align_corners=True)[0, 0]
-        with Timer() as cpu:
-            result = depth.cpu().numpy()
+        depth = self.forward(image)
+        depth = F.interpolate(depth[:, None], (h, w), mode="bilinear", align_corners=True)[0, 0]
+        result = depth.cpu().numpy()
 
-        print(
-            f"Image 2 tensor : {im2tensor.elapsed:.6f} - Model inference : {infer.elapsed:.6f} - Interpolation : {inter.elapsed:.6f} - GPU to CPU : {cpu.elapsed:.6f}"
-        )
         return result
 
     @torch.no_grad()
@@ -196,6 +189,16 @@ class DepthAnythingV2(nn.Module):
         depth = F.interpolate(depth[:, None], (h, w), mode="bilinear", align_corners=True)[0, 0]
 
         return depth.cpu().numpy()
+
+    @torch.no_grad()
+    def infer_images_cuda(self, images, h, w):
+        depths = []
+        for i in images:
+            depth = self.forward(i)
+            depth = F.interpolate(depth[:, None], (h, w), mode="bilinear", align_corners=True)[0, 0]
+            depths.append(depth)
+        depths = torch.cat(depths, dim=0)
+        return depths.cpu().numpy()
 
     def image2tensor(self, raw_image, input_size=(512, 288)):
         h, w = raw_image.shape[:2]
@@ -225,3 +228,35 @@ class DepthAnythingV2(nn.Module):
         image = image.to(DEVICE)
 
         return image, (h, w)
+
+    def images2tensor(self, raw_images, input_size=(512, 288)):
+        images = np.array([])
+        h, w = raw_images[0].shape[:2]
+        for raw_image in raw_images:
+
+
+            image = cv2.cvtColor(raw_image, cv2.COLOR_BGR2RGB) / 255.0
+
+            transformer = Compose(
+                [
+                    Resize(
+                        width=input_size[0],
+                        height=input_size[1],
+                        resize_target=False,
+                        keep_aspect_ratio=True,
+                        ensure_multiple_of=14,
+                        resize_method="lower_bound",
+                        image_interpolation_method=cv2.INTER_CUBIC,
+                    ),
+                    NormalizeImage(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                    PrepareForNet(),
+                ]
+            )
+
+            np.append(images, [transformer({"image": image})["image"]])
+        images = torch.from_numpy(images).unsqueeze(0)
+
+        DEVICE = "cuda"
+        images = images.to(DEVICE)
+
+        return images, (h, w)

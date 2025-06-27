@@ -2,7 +2,6 @@ import re
 from abc import ABC, abstractmethod
 from enum import Enum
 
-import easyocr
 from overrides import override
 from paddleocr import PaddleOCR
 
@@ -36,6 +35,7 @@ class OCRReader(BibReader):
         self.conf_treshold = conf_treshold
         self.type = type
         if type == OCRType.EASYOCR:
+            import easyocr
             self.reader = easyocr.Reader(lang)
             self.readText = lambda x: self.reader.readtext(x)
         elif type == OCRType.PADDLE:

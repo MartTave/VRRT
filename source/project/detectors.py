@@ -2,13 +2,10 @@ from ultralytics import YOLO
 from collections import defaultdict
 import cv2
 import numpy as np
-import easyocr
 import uuid
 import re
 
 custom_config = r"--oem 3 --psm 7 -c tessedit_char_whitelist=0123456789."
-
-reader = easyocr.Reader(["en"])
 
 def cropFromBoxes(frame, boxes):
     res = []
@@ -58,62 +55,62 @@ class BibDetector:
         return self.model(frame, verbose=False)
 
 
-class RunnerTracker:
+# class RunnerTracker:
 
-    bibs = {}
-    bib_regx = re.compile("^[0-9]+(\.[0-9])?$") # Match on <NUMBER> and <NUMBER.N>
+#     bibs = {}
+#     bib_regx = re.compile("^[0-9]+(\.[0-9])?$") # Match on <NUMBER> and <NUMBER.N>
 
-    def __init__(self, person_tracker:Tracker, bib_detector: BibDetector, bib_treshold=1.5) -> None:
-        self.person_tracker = person_tracker
-        self.bib_detector = bib_detector
-        self.bib_treshold = bib_treshold
+#     def __init__(self, person_tracker:Tracker, bib_detector: BibDetector, bib_treshold=1.5) -> None:
+#         self.person_tracker = person_tracker
+#         self.bib_detector = bib_detector
+#         self.bib_treshold = bib_treshold
 
-    def new_frame(self, frame, anotate=False):
-        person_result = self.person_tracker.track(frame)
-        boxes = person_result[0].boxes
-        if boxes is not None:
-            if boxes.id is None:
-                return
-            ids = boxes.id.int()
-            persons_cropped = cropFromBoxes(person_result[0].orig_img, boxes)
-            for i, p in enumerate(persons_cropped):
-                p_id = ids[i]
-                bib_detected = self.bib_detector.infer(p)
-                bib_boxes = bib_detected[0].boxes
-                if bib_boxes is not None:
-                    bib_cropped = cropFromBoxes(p, bib_boxes)
-                    for bib in bib_cropped:
-                        res = reader.readtext(bib)
-                        if len(res) > 1:
-                            print("Detected more than one text in this image..")
-                            cv2.imwrite(f"./debug/mult/{str(uuid.uuid4())}.jpg", bib)
-                            continue
-                        elif len(res) == 0:
-                            cv2.imwrite(f"./debug/not_detected/{str(uuid.uuid4())}.jpg", bib)
-                            continue
-                        res = res[0]
-                        if res[2] < 0.2:
-                            print("Confidence is not high enough !")
-                            cv2.imwrite(f"./debug/conf/{str(uuid.uuid4())}.jpg", bib)
-                            continue
-                        bib_n = res[1]
+#     def new_frame(self, frame, anotate=False):
+#         person_result = self.person_tracker.track(frame)
+#         boxes = person_result[0].boxes
+#         if boxes is not None:
+#             if boxes.id is None:
+#                 return
+#             ids = boxes.id.int()
+#             persons_cropped = cropFromBoxes(person_result[0].orig_img, boxes)
+#             for i, p in enumerate(persons_cropped):
+#                 p_id = ids[i]
+#                 bib_detected = self.bib_detector.infer(p)
+#                 bib_boxes = bib_detected[0].boxes
+#                 if bib_boxes is not None:
+#                     bib_cropped = cropFromBoxes(p, bib_boxes)
+#                     for bib in bib_cropped:
+#                         res = reader.readtext(bib)
+#                         if len(res) > 1:
+#                             print("Detected more than one text in this image..")
+#                             cv2.imwrite(f"./debug/mult/{str(uuid.uuid4())}.jpg", bib)
+#                             continue
+#                         elif len(res) == 0:
+#                             cv2.imwrite(f"./debug/not_detected/{str(uuid.uuid4())}.jpg", bib)
+#                             continue
+#                         res = res[0]
+#                         if res[2] < 0.2:
+#                             print("Confidence is not high enough !")
+#                             cv2.imwrite(f"./debug/conf/{str(uuid.uuid4())}.jpg", bib)
+#                             continue
+#                         bib_n = res[1]
 
-                        match = re.match(self.bib_regx, bib_n)
-                        if match is None:
-                            print(f"Detected a bib number that does not match the regex : {bib_n}")
-                            continue
+#                         match = re.match(self.bib_regx, bib_n)
+#                         if match is None:
+#                             print(f"Detected a bib number that does not match the regex : {bib_n}")
+#                             continue
 
-                        if bib_n not in self.bibs:
-                            self.bibs[bib_n] = {
-                            "confidence": 0,
-                            "p_ids": [],
-                            "accepted": False
-                            }
-                        self.bibs[bib_n]["confidence"] += res[2]
-                        print(f"{bib_n} conf : {self.bibs[bib_n]['confidence']}")
-                        if self.bibs[bib_n]["confidence"] >= self.bib_treshold and not self.bibs[bib_n]["accepted"]:
-                            self.bibs[bib_n]["accepted"] = True
-                            print(f"Found new bib : {bib_n}")
-                            cv2.imwrite(f"./debug/res/{bib_n}.jpg", person_result[0].orig_img)
-                        if p_id not in self.bibs[bib_n]["p_ids"]:
-                            self.bibs[bib_n]["p_ids"].append(p_id)
+#                         if bib_n not in self.bibs:
+#                             self.bibs[bib_n] = {
+#                             "confidence": 0,
+#                             "p_ids": [],
+#                             "accepted": False
+#                             }
+#                         self.bibs[bib_n]["confidence"] += res[2]
+#                         print(f"{bib_n} conf : {self.bibs[bib_n]['confidence']}")
+#                         if self.bibs[bib_n]["confidence"] >= self.bib_treshold and not self.bibs[bib_n]["accepted"]:
+#                             self.bibs[bib_n]["accepted"] = True
+#                             print(f"Found new bib : {bib_n}")
+#                             cv2.imwrite(f"./debug/res/{bib_n}.jpg", person_result[0].orig_img)
+#                         if p_id not in self.bibs[bib_n]["p_ids"]:
+#                             self.bibs[bib_n]["p_ids"].append(p_id)
