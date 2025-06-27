@@ -51,6 +51,11 @@ frame_limit = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
 ANNOTATE = True
 
+width = parameters["crop"][1][0] - parameters["crop"][0][0]
+height = parameters["crop"][1][1] - parameters["crop"][0][1]
+
+writer = cv2.VideoWriter("./out.mp4", cv2.VideoWriter_fourcc(*"mp4v"), 30, frameSize=(width, height))
+
 def sequential_pipe():
     cap.set(cv2.CAP_PROP_POS_FRAMES, START_FRAME)
     for i in tqdm(range(START_FRAME, END_FRAME)):
@@ -60,9 +65,7 @@ def sequential_pipe():
             break
         frame = crop(frame, parameters["crop"])
         pipeline.new_frame(frame, i, ANNOTATE)
-        # cv2.imshow("frame", frame)
-        # cv2.waitKey(1)
-
+        writer.write(frame)
 
 def batched_pipe(batch_size=10):
     for i in tqdm(range(0, frame_limit, batch_size)):
@@ -77,6 +80,7 @@ def batched_pipe(batch_size=10):
 
 
 sequential_pipe()
+writer.release()
 
 res = {}
 for id, p in pipeline.persons.items():

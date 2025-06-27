@@ -4,8 +4,38 @@ from classes.bib_reader import BibReader
 from classes.person_detector import PersonDetector
 from classes.tools import get_colored_logger
 from depth import ArrivalLine
+import concurrent.futures
+from multiprocessing import Pool
 logger = get_colored_logger(__name__)
 
+
+def check_bib_in_person(bib_box, person_boxes):
+    bib_center_x = (bib_box[0] + bib_box[2]) / 2
+    bib_center_y = (bib_box[1] + bib_box[3]) / 2
+
+    if person_boxes.id is None:
+        logger.warning("Did not have an id for tracking !")
+        return False, None
+
+    for i, p_box in enumerate(person_boxes.xyxy):
+        if (p_box[0] <= bib_center_x <= p_box[2]) and (p_box[1] <= bib_center_y <= p_box[3]):
+            return True, person_boxes.id[i]
+    return False, None
+
+def treat_bib_result(args):
+    bib_box, bib_reader, frame, person_result = args
+    res = check_bib_in_person(bib_box, person_result.boxes)
+    if res[0]:
+        person_id = int(res[1])
+        if person_id is None:
+            return None
+        cropped_bib = frame[bib_box[1].int() : bib_box[3].int(), bib_box[0].int() : bib_box[2].int()].copy()
+
+        res = bib_reader.read_frame(cropped_bib)
+        if res is None:
+            return None
+        return (res[0], res[1], person_id)
+    return None
 
 def box_to_points(box):
     return (int(box[0]), int(box[1])), (int(box[2]), int(box[3]))
@@ -84,28 +114,24 @@ class Pipeline:
         self.persons = {k:v for k, v in self.persons.items() if v.passed_line and len(v.bibs) == 0 and current_frame_index - v.last_detected > self.grace_not_detected}
 
 
-    def check_bib_in_person(self, bib_box, person_boxes):
-        bib_center_x = (bib_box[0] + bib_box[2]) / 2
-        bib_center_y = (bib_box[1] + bib_box[3]) / 2
-
-        if person_boxes.id is None:
-            logger.warning("Did not have an id for tracking !")
-            return False, None
-
-        for i, p_box in enumerate(person_boxes.xyxy):
-            if (p_box[0] <= bib_center_x <= p_box[2]) and (p_box[1] <= bib_center_y <= p_box[3]):
-                return True, person_boxes.id[i]
-        return False, None
-
     def new_frame(self, frame, frame_index, annotate=False):
-        person_result = self.person_detector.detect_persons(frame)
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+                # Submit all three methods to the executor
+                future_person = executor.submit(self.person_detector.detect_persons, frame)
+                future_bib = executor.submit(self.bib_detector.detect_bib, frame)
+                future_depth = executor.submit(self.line.model.infer_image, frame)
+
+                # Wait for all futures to complete and get results
+                person_result = future_person.result()
+                bib_result = future_bib.result()
+                depth = future_depth.result()
 
         if person_result is None or len(person_result.boxes.xyxy) == 0:
             # If no person are detected, we can't do anyhting...
             return []
-        bib_result = self.bib_detector.detect_bib(frame)
 
-        arrived = self.line.new_frame(frame, person_result.boxes, annotate)
+        arrived = self.line.treat_depth(depth, person_result.boxes, frame, annotate)
 
         detected_persons = []
 
@@ -117,9 +143,11 @@ class Pipeline:
                 self.persons[p_id].passed_line = True
                 self.persons[p_id].frame_passed_line = frame_index
             self.persons[p_id].last_detected = frame_index
+
+
         if bib_result is not None:
             for bib_box in bib_result.boxes.xyxy:
-                res = self.check_bib_in_person(bib_box, person_result.boxes)
+                res = check_bib_in_person(bib_box, person_result.boxes)
                 if res[0]:
                     person_id = int(res[1])
                     if person_id is None:

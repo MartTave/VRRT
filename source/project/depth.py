@@ -142,6 +142,60 @@ class ArrivalLine:
                         arrived.append(id)
         return arrived
 
+    def treat_depth(self, depth, person_boxes, frame, annotate=False):
+        if person_boxes.id is None:
+            print("No id for person boxes !")
+            return []
+
+        def get_box_center(xyxy):
+            return int((xyxy[0] + xyxy[2]) // 2), int((xyxy[1] + xyxy[3]) // 2)
+
+        arrived = []
+        for box, id in zip(person_boxes.xyxy, person_boxes.id, strict=False):
+            id = int(id)
+            color = (0, 0, 255)
+            if id not in self.persons_depth.keys():
+                if id == 5:
+                    print(f"Recreating array, {id} and arr is : {self.persons_depth.keys()}")
+                self.persons_depth[id] = {
+                    "depths": np.array([]),
+                    "arrived": False,
+                }
+            if self.persons_depth[id]["arrived"]:
+                color = (0, 255, 0)
+                continue
+            center = get_box_center(box)
+            curr_person_depth = depth[center[1]][center[0]]
+            self.persons_depth[id]["depths"] = np.append(self.persons_depth[id]["depths"], [curr_person_depth])
+            if len(self.persons_depth[id]["depths"]) > 120:
+                self.persons_depth[id]["depths"] = np.delete(self.persons_depth[id]["depths"], [0])
+            elif len(self.persons_depth[id]["depths"]) < 30:
+                continue
+            res = linregress(range(len(self.persons_depth[id]["depths"])), self.persons_depth[id]["depths"])
+            if np.isnan(res.slope):
+                continue
+
+            if res.slope < 0 - self.min_slope and self.reversed or res.slope > self.min_slope and not self.reversed:
+                # The person is moving in the right direction
+                if center[0] in self.line.keys():
+                    curr_target = depth[self.line[center[0]]][center[0]]
+                    if (curr_person_depth < curr_target and self.reversed) or (curr_person_depth > curr_target and not self.reversed):
+                        self.persons_depth[id]["arrived"] = True
+                        arrived.append(id)
+                        color = (0, 255, 0)
+                    color = (255, 0, 0)
+                else:
+                    color = (0, 255, 255)
+
+            if annotate:
+                cv2.circle(frame, center, 7, color, cv2.FILLED)
+        if annotate:
+            x = sorted(list(self.line.keys()))
+            x_start = x[0]
+            x_end = x[-1]
+            cv2.line(frame, (x_start, self.line[x_start]), (x_end, self.line[x_end]), (255, 255, 0), 3)
+        return arrived
+
     def new_frame(self, frame, person_boxes, annotate=False):
         if person_boxes.id is None:
             print("No id for person boxes !")
