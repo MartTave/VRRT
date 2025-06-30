@@ -1,11 +1,13 @@
+import concurrent.futures
+
 import cv2
+
 from classes.bib_detector import BibDetector
 from classes.bib_reader import BibReader
 from classes.person_detector import PersonDetector
 from classes.tools import get_colored_logger
 from depth import ArrivalLine
-import concurrent.futures
-from multiprocessing import Pool
+
 logger = get_colored_logger(__name__)
 
 
@@ -22,6 +24,7 @@ def check_bib_in_person(bib_box, person_boxes):
             return True, person_boxes.id[i]
     return False, None
 
+
 def treat_bib_result(args):
     bib_box, bib_reader, frame, person_result = args
     res = check_bib_in_person(bib_box, person_result.boxes)
@@ -37,8 +40,10 @@ def treat_bib_result(args):
         return (res[0], res[1], person_id)
     return None
 
+
 def box_to_points(box):
     return (int(box[0]), int(box[1])), (int(box[2]), int(box[3]))
+
 
 class Bib:
     bib_text: str
@@ -46,7 +51,7 @@ class Bib:
     conf_tresh: float
     detected: bool = False
 
-    def __init__(self, bib_text, other_bibs = [], conf_tresh=1.5):
+    def __init__(self, bib_text, other_bibs=[], conf_tresh=1.5):
         self.bib_text = bib_text
         # At the bib creation, we check if the new text contains any other bib text
         # If yes, we add the confidence of the others bib to this one
@@ -69,8 +74,8 @@ class Person:
     last_detected: int
     bibs: dict[str, Bib]
     best_bib: Bib | None
-    passed_line:bool
-    frame_passed_line:int
+    passed_line: bool
+    frame_passed_line: int
 
     def __init__(self, id):
         self.id = id
@@ -101,39 +106,39 @@ class Pipeline:
     bib_reader: BibReader
     persons: dict[int, Person] = {}
 
-    def __init__(self, person_detector: PersonDetector, bib_detector: BibDetector, bib_reader: BibReader, line:ArrivalLine):
+    def __init__(self, person_detector: PersonDetector, bib_detector: BibDetector, bib_reader: BibReader, line: ArrivalLine):
         self.person_detector = person_detector
         self.bib_detector = bib_detector
         self.bib_reader = bib_reader
         self.line = line
         # Number of frame that a person can be undetected before being treated as out of frame
-        self.grace_not_detected = 300 # = 10 sec at 30FPS
+        self.grace_not_detected = 300  # = 10 sec at 30FPS
         logger.info("Pipeline initialized !")
 
     def remove_useless_persons(self, current_frame_index):
-        self.persons = {k:v for k, v in self.persons.items() if v.passed_line and len(v.bibs) == 0 and current_frame_index - v.last_detected > self.grace_not_detected}
-
+        self.persons = {
+            k: v
+            for k, v in self.persons.items()
+            if v.passed_line or len(v.bibs) > 0 or current_frame_index - v.last_detected < self.grace_not_detected
+        }
 
     def new_frame(self, frame, frame_index, annotate=False):
-
         with concurrent.futures.ThreadPoolExecutor() as executor:
-                # Submit all three methods to the executor
-                future_person = executor.submit(self.person_detector.detect_persons, frame)
-                future_bib = executor.submit(self.bib_detector.detect_bib, frame)
-                future_depth = executor.submit(self.line.model.infer_image, frame)
+            # Submit all three methods to the executor
+            future_person = executor.submit(self.person_detector.detect_persons, frame)
+            future_bib = executor.submit(self.bib_detector.detect_bib, frame)
+            future_depth = executor.submit(self.line.model.infer_image, frame)
 
-                # Wait for all futures to complete and get results
-                person_result = future_person.result()
-                bib_result = future_bib.result()
-                depth = future_depth.result()
+            # Wait for all futures to complete and get results
+            person_result = future_person.result()
+            bib_result = future_bib.result()
+            depth = future_depth.result()
 
         if person_result is None or len(person_result.boxes.xyxy) == 0:
             # If no person are detected, we can't do anyhting...
             return []
 
         arrived = self.line.treat_depth(depth, person_result.boxes, frame, annotate)
-
-        detected_persons = []
 
         for p_id in person_result.boxes.id:
             p_id = int(p_id)
@@ -143,7 +148,6 @@ class Pipeline:
                 self.persons[p_id].passed_line = True
                 self.persons[p_id].frame_passed_line = frame_index
             self.persons[p_id].last_detected = frame_index
-
 
         if bib_result is not None:
             for bib_box in bib_result.boxes.xyxy:
@@ -159,7 +163,7 @@ class Pipeline:
                         bib, confidence = res
                         self.persons[person_id].detected_bib(bib, confidence)
         if annotate:
-            for box, id in zip(person_result.boxes.xyxy, person_result.boxes.id):
+            for box, id in zip(person_result.boxes.xyxy, person_result.boxes.id, strict=False):
                 id = int(id)
                 curr_pers = self.persons[id]
                 color = (0, 0, 255)
@@ -178,7 +182,14 @@ class Pipeline:
                 cv2.rectangle(frame, person_points[0], person_points[1], color=color)
 
                 # Draw text for person info
-                cv2.putText(frame, text_1, (person_points[0][0], person_points[0][1] - 14), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=(255, 0, 255))
+                cv2.putText(
+                    frame,
+                    text_1,
+                    (person_points[0][0], person_points[0][1] - 14),
+                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                    fontScale=0.5,
+                    color=(255, 0, 255),
+                )
                 cv2.putText(frame, text_2, person_points[0], fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=bib_color)
             if bib_result is not None:
                 for box in bib_result.boxes.xyxy:

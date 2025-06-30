@@ -77,7 +77,7 @@ class ArrivalLine:
         self.line = self.get_line_pixels(line)
         pass
 
-    def get_line_pixels(self, points:tuple[int, int]) -> dict[int, int]:
+    def get_line_pixels(self, points: tuple[int, int]) -> dict[int, int]:
         start_point, end_point = points
         x1, y1 = start_point
         x2, y2 = end_point
@@ -114,8 +114,6 @@ class ArrivalLine:
         for box, id in zip(person_boxes.xyxy, person_boxes.id, strict=False):
             id = int(id)
             if id not in self.persons_depth.keys():
-                if id == 5:
-                    print(f"Recreating array, {id} and arr is : {self.persons_depth.keys()}")
                 self.persons_depth[id] = {
                     "depths": np.array([]),
                     "arrived": False,
@@ -262,10 +260,9 @@ class ArrivalLine:
     def treat_batch(self, cuda_loaded, p_boxes):
         results = []
         depths = self.model.infer_images_cuda(*cuda_loaded)
-        for d, p_box in zip(depths, p_boxes):
+        for d, p_box in zip(depths, p_boxes, strict=False):
             results.append(self.treat_result(d, p_box))
         return results
-
 
     def treat_loaded_frames(self, person_boxes):
         results = []

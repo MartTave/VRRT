@@ -1,7 +1,7 @@
 import json
 
+import cv2
 import pandas as pd
-from easyocr.DBNet.DBNet import cv2
 
 impossible_list = ["2003", "2007", "2077", "2018", "2055", "2065", "2103", "2134", "2144", "2149", "2166", "2171", "2172", "2177"]
 

@@ -36,10 +36,11 @@ class OCRReader(BibReader):
         self.type = type
         if type == OCRType.EASYOCR:
             import easyocr
+
             self.reader = easyocr.Reader(lang)
             self.readText = lambda x: self.reader.readtext(x)
         elif type == OCRType.PADDLE:
-            self.reader = PaddleOCR(use_doc_orientation_classify=False, use_doc_unwarping=False, use_textline_orientation=False)
+            self.reader = PaddleOCR(use_doc_orientation_classify=True, use_doc_unwarping=False, use_textline_orientation=True)
             self.readText = lambda x: self.reader(x)[1]
 
     def bib_text_preprocess(self, bib_txt: str):
