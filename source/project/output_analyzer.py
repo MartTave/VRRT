@@ -57,21 +57,28 @@ class OutputAnalyzer:
 
         print(f"Frames : {frame_start + self.frame_start} - {frame_end + self.frame_start}")
         self.video_cap.set(cv2.CAP_PROP_POS_FRAMES, frame_start)
-        for i in range(frame_start, frame_end):
+        i = 0
+        while i < frame_end:
             ret, frame = self.video_cap.read()
             assert ret
             cv2.imshow("frame", frame)
             key = cv2.waitKey(90)
             if key == ord("q"):
                 break
+            if key == ord("r"):
+                i = frame_start
+                self.video_cap.set(cv2.CAP_PROP_POS_FRAMES, frame_start)
+            i += 1
 
     def apply_filtering(self, conf_treshold=1.5):
         to_remove = []
         new_dict = {}
         doublon_count = 0
+        removed_conf = 0
         for key, item in self.computed_results.items():
             if item["best_bib"] != "" and item["confidence"] < conf_treshold:
                 # to_remove.append(key)
+                removed_conf += 1
                 continue
             doublon = False
             for key2, item2 in self.computed_results.items():
@@ -83,9 +90,12 @@ class OutputAnalyzer:
                         new_dict[key] = item
                         new_dict[key]["best_bib"] = ""
                         doublon_count += 1
+                        # We already found a bib with a bigger confidence, we can break the loop
+                        break
                     # We have a double detection !
             if not doublon:
                 new_dict[key] = item
+        print(f"Filtering done. Doublon : {doublon_count}, removed with treshold : {removed_conf}")
         self.computed_results = new_dict
 
     def get_closest_frame(self, timestamp, arr, found_index=0):
@@ -106,15 +116,16 @@ class OutputAnalyzer:
         result = {
             "found_bib": 0,
             "wrong_detection": 0,
-            "not_read": 0,
             "not_found": 0,
             "mean_diff": 0,
+            "no_bib": 0,
             "max_diff": -1,
             "min_diff": -1,
             "detail": {
                 "founds": [],
                 "not_found": [],
                 "wrong_detection": [],
+                "no_bib": [],
             },
         }
         found = []
@@ -123,7 +134,8 @@ class OutputAnalyzer:
             computed_time = val["time"]
             if bib_text == "":
                 # This mean we have detected someone passing the line, without reading his bib number...
-                result["not_read"] += 1
+                result["no_bib"] += 1
+                result["detail"]["no_bib"].append((None, computed_time, None, key))
             elif bib_text in self.official_results:
                 official_time = self.official_results[bib_text]
                 time_diff = abs(computed_time - official_time)
@@ -156,10 +168,27 @@ class OutputAnalyzer:
         return result
 
 
+def compare_results_details(res1, res2):
+    for key in ["founds", "wrong_detection", "not_found"]:
+        curr_res1 = [el[0] for el in res1["detail"][key]]
+        curr_res2 = [el[0] for el in res2["detail"][key]]
+        res1_bonus = []
+        res2_bonus = []
+        for bib in curr_res1:
+            if bib not in curr_res2:
+                res1_bonus.append(bib)
+        for bib in curr_res2:
+            if bib not in curr_res1:
+                res2_bonus.append(bib)
+        print(f"For {key}:")
+        print(f"Present in 1 but not 2 : {res1_bonus}")
+        print(f"Present in 2 but not 1 : {res2_bonus}")
+
+
 parser = OutputAnalyzer(
     official_result_filepath="./data/race_results/official_base.csv",
-    computed_results_filepath="./results/results_disco/results_disco_filtered.json",
-    debug_video_path="./results/results_disco/debug_disco.mp4",
+    computed_results_filepath="./results/results_disco_2/results.json",
+    debug_video_path="./results/results_disco_2/output.mp4",
     frame_to_timestamp_filepath="./data/recorded/merged/right_merged_full.csv",
 )
 
@@ -169,14 +198,16 @@ parser.apply_filtering()
 
 res2 = parser.get_statistics()
 
+# compare_results_details(res, res2)
 
-for key in ["found_bib", "wrong_detection", "not_found"]:
+
+for key in ["found_bib", "wrong_detection", "not_found", "no_bib"]:
     print(f"Not filtered : {key} : {res[key]}")
     print(f"Filtered : {key} : {res2[key]}")
 
 
-def wrong_detection_analysis():
-    for i in res2["detail"]["wrong_detection"]:
+def wrong_detection_analysis(res):
+    for i in res["detail"]["wrong_detection"]:
         if i[2] is None:
             print(f"Detected a number that does not exists : {i[0]} was person id : {i[3]}")
             parser.show_video_clip(timestamp=i[1])
@@ -187,12 +218,18 @@ def wrong_detection_analysis():
             parser.show_video_clip(timestamp=i[2])
 
 
-def not_found_analysis():
-    for i in res2["detail"]["not_found"]:
-        if i[0] != "2088":
-            continue
+def not_found_analysis(res):
+    for i in res["detail"]["not_found"]:
         print(f"{i[0]} not found")
         parser.show_video_clip(timestamp=i[2])
 
 
-not_found_analysis()
+def no_bib_analysis(res):
+    for i in res["detail"]["no_bib"]:
+        print(f"{i[3]} passed line without bib")
+        parser.show_video_clip(timestamp=i[1])
+
+
+# wrong_detection_analysis(res2)
+
+no_bib_analysis(res2)

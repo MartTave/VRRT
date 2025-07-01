@@ -1,12 +1,11 @@
 import concurrent.futures
 
 import cv2
-
-from classes.bib_detector import BibDetector
-from classes.bib_reader import BibReader
-from classes.person_detector import PersonDetector
-from classes.tools import get_colored_logger
+from bib_detector import BibDetector
+from bib_reader import BibReader
 from depth import ArrivalLine
+from person_detector import PersonDetector
+from tools import get_colored_logger
 
 logger = get_colored_logger(__name__)
 
@@ -218,3 +217,7 @@ class Pipeline:
                     if res is not None:
                         bib, confidence = res
                         self.persons[person_id].detected_bib(bib, confidence)
+
+    def clean_detections(self):
+        # We pass the biggest number available as int32 in order to flush every person detected that has not passed the line and have no bib detected
+        self.remove_useless_persons(2_147_483_647)
