@@ -32,11 +32,11 @@ with open("parameters.json") as file:
 
 START_FRAME = 10 * 60 * 30
 
-START_FRAME = 62264
+# START_FRAME = 62264
 
 END_FRAME = 75 * 60 * 30
 
-END_FRAME = 62564
+# END_FRAME = 62564
 
 cap = cv2.VideoCapture("./data/recorded/merged/right_merged.mp4")
 df = pd.read_csv("./data/recorded/merged/right_merged_full.csv", header=None, names=["frame_n", "timestamp"], delimiter=";")

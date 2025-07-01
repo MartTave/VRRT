@@ -138,7 +138,7 @@ class Pipeline:
             # If no person are detected, we can't do anyhting...
             return []
 
-        arrived = self.line.treat_depth(depth, person_result.boxes, frame, annotate)
+        arrived = self.line.treat_depth(depth, person_result, frame, annotate)
 
         for p_id in person_result.boxes.id:
             p_id = int(p_id)

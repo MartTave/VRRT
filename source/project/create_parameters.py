@@ -1,15 +1,20 @@
-import cv2
 import json
-from depth import ArrivalLine, get_arrival_line
+
+import cv2
+
+from depth import get_arrival_line
 
 points = []
 clone = []
+
+
 def get_cropping_region(frame):
     global points, clone
     # Global variables
     clone = frame.copy()
     window_name = "image"
     points = []
+
     def click_and_crop(event, x, y, flags, param):
         global points, clone
         # If the left mouse button was clicked
@@ -31,8 +36,6 @@ def get_cropping_region(frame):
             if len(points) == 2:
                 cv2.rectangle(clone, points[0], points[1], (0, 255, 0), 2)
                 cv2.imshow(window_name, clone)
-
-
 
     # Create a window and set the mouse callback function
     cv2.namedWindow(window_name)
@@ -62,6 +65,7 @@ def get_cropping_region(frame):
             cv2.destroyAllWindows()
             return None
 
+
 FRAME = 10 * 60 * 30
 cap = cv2.VideoCapture("./data/recorded/merged/right_merged.mp4")
 cap.set(cv2.CAP_PROP_POS_FRAMES, FRAME)
@@ -74,15 +78,17 @@ crop_points = get_cropping_region(frame)
 if crop_points is None:
     raise Exception("You need to select a cropping region")
 
-parameters["crop"] = [
-    crop_points[0],crop_points[1]
-]
-frame = frame[crop_points[0][1]:crop_points[1][1], crop_points[0][0]:crop_points[1][0]]
+parameters["crop"] = [crop_points[0], crop_points[1]]
+frame = frame[crop_points[0][1] : crop_points[1][1], crop_points[0][0] : crop_points[1][0]]
 
-print("Please click to designate an arrival line, and then press 'S' to save")
+print("Please click to designate an arrival line, and thèen press 'S' to save")
 line = get_arrival_line(frame)
 
-parameters["line"] = line
+parameters["line"] = {
+    "start": line[0],
+    "end": line[1],
+}
+
 
 with open("parameters.json", "w") as file:
     file.write(json.dumps(parameters))

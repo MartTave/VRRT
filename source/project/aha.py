@@ -1,13 +1,16 @@
-import json
+from ultralytics import YOLO
 
-with open("./results/results_disco.json", "r") as file:
-    dict = json.loads("\n".join(file.readlines()))
+# Load a model
+model = YOLO("yolo11n-pose.pt")  # load an official model
 
+# Predict with the model
+results = model.track("https://ultralytics.com/images/bus.jpg")  # predict on an image
 
-filtered = {"frame_start": 18000, "frame_end": 135000}
-for key, value in dict.items():
-    if value["passed_line"] or len(value["bibs"]) > 0:
-        filtered[key] = value
+# Access the results
+for result in results:
+    import ipdb
 
-with open("./results/results_disco_filtered.json", "w") as file:
-    file.write(json.dumps(filtered))
+    ipdb.set_trace()
+    xy = result.keypoints.xy  # x and y coordinates
+    xyn = result.keypoints.xyn  # normalized
+    kpts = result.keypoints.data  # x, y, visibility (if available)
