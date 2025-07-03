@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-import cv2
+import torch
 from cv2.typing import MatLike
 from overrides import override
 from ultralytics import YOLO
@@ -21,12 +21,13 @@ class BibDetector(ABC):
 
 
 class PreTrainedModel(BibDetector):
-    def __init__(self, model_path) -> None:
+    def __init__(self, model_path, device=torch.device(0)) -> None:
         self.model = YOLO(model_path)
+        self.device = f"{device.type}:{device.index}" if device.index else f"{device.type}"
 
     @override
     def detect_bib(self, pic: MatLike) -> None:
-        results = self.model(pic, verbose=False)
+        results = self.model(pic, verbose=False, device=self.device)
         if len(results) == 0:
             return None
         result = results[0]
@@ -38,6 +39,6 @@ class PreTrainedModel(BibDetector):
 
     @override
     def detect_bib_multiple(self, pics: MatLike) -> list:
-        results = self.model(pics, verbose=False)
+        results = self.model(pics, verbose=False, batch=len(pics))
         assert results is not None
         return results

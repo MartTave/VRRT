@@ -1,9 +1,10 @@
+import logging
 import re
 from abc import ABC, abstractmethod
 from enum import Enum
 
+import torch
 from overrides import override
-from paddleocr import PaddleOCR
 
 from .tools import get_colored_logger
 
@@ -30,9 +31,10 @@ class OCRReader(BibReader):
     accepted_chars: str
     bib_regx = re.compile("^[0-9]{1,4}([.][0-9]{1,3})?$")  # Match on <NUMBER> and <NUMBER.N>
 
-    def __init__(self, type: OCRType = OCRType.PADDLE, lang=["en"], conf_treshold=0.6, accepted_chars="1234567890."):
+    def __init__(self, type: OCRType = OCRType.PADDLE, device=torch.device(0), lang=["en"], conf_treshold=0.6, accepted_chars="1234567890."):
         self.accepted_chars = accepted_chars
         self.conf_treshold = conf_treshold
+        self.device = f"{device.type}:{device.index}" if device.index else f"{device.type}"
         self.type = type
         if type == OCRType.EASYOCR:
             import easyocr
@@ -40,7 +42,16 @@ class OCRReader(BibReader):
             self.reader = easyocr.Reader(lang)
             self.readText = lambda x: self.reader.readtext(x)
         elif type == OCRType.PADDLE:
-            self.reader = PaddleOCR(use_doc_orientation_classify=True, use_doc_unwarping=False, use_textline_orientation=True)
+            from paddleocr import PaddleOCR
+
+            logging.getLogger("ppocr").setLevel(logging.ERROR)
+
+            self.reader = PaddleOCR(
+                use_doc_orientation_classify=True,
+                use_doc_unwarping=True,
+                use_textline_orientation=True,
+                device=self.device,
+            )
             self.readText = lambda x: self.reader(x)[1]
 
     def bib_text_preprocess(self, bib_txt: str):

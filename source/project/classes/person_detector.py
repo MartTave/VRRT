@@ -1,6 +1,7 @@
 import typing
 from abc import ABC, abstractmethod
 
+import torch
 from cv2.typing import MatLike
 from overrides import override
 from ultralytics import YOLO
@@ -21,12 +22,15 @@ class PersonDetector(ABC):
 
 
 class YOLOv11(PersonDetector):
-    def __init__(self, model):
-        self.model = YOLO(model)
+    def __init__(self, model, device=torch.device(0)):
+        self.model = YOLO(
+            model,
+        )
+        self.device = f"{device.type}:{device.index}" if device.index else f"{device.type}"
 
     @override
     def detect_persons(self, frame) -> tuple[list[MatLike], typing.Any] | None:
-        results = self.model.track(frame, verbose=False, tracker="./trackers/botsort.yaml", persist=True)
+        results = self.model.track(frame, verbose=False, tracker="./trackers/botsort.yaml", persist=True, device=self.device)
 
         if len(results) == 0:
             return None

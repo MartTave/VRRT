@@ -1,11 +1,12 @@
 import concurrent.futures
 
 import cv2
-from bib_detector import BibDetector
-from bib_reader import BibReader
-from depth import ArrivalLine
-from person_detector import PersonDetector
-from tools import get_colored_logger
+
+from classes.bib_detector import BibDetector
+from classes.bib_reader import BibReader
+from classes.depth import ArrivalLine
+from classes.person_detector import PersonDetector
+from classes.tools import get_colored_logger
 
 logger = get_colored_logger(__name__)
 
@@ -121,18 +122,7 @@ class Pipeline:
             if v.passed_line or len(v.bibs) > 0 or current_frame_index - v.last_detected < self.grace_not_detected
         }
 
-    def new_frame(self, frame, frame_index, annotate=False):
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            # Submit all three methods to the executor
-            future_person = executor.submit(self.person_detector.detect_persons, frame)
-            future_bib = executor.submit(self.bib_detector.detect_bib, frame)
-            future_depth = executor.submit(self.line.model.infer_image, frame)
-
-            # Wait for all futures to complete and get results
-            person_result = future_person.result()
-            bib_result = future_bib.result()
-            depth = future_depth.result()
-
+    def treat_new_frame_result(self, frame, frame_index, person_result, bib_result, depth, annotate=False):
         if person_result is None or len(person_result.boxes.xyxy) == 0:
             # If no person are detected, we can't do anyhting...
             return []
@@ -199,24 +189,32 @@ class Pipeline:
             self.remove_useless_persons(frame_index)
         return self.persons
 
+    def new_frame(self, frame, frame_index, annotate=False):
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # Submit all three methods to the executor
+            future_person = executor.submit(self.person_detector.detect_persons, frame)
+            future_bib = executor.submit(self.bib_detector.detect_bib, frame)
+            future_depth = executor.submit(self.line.model.infer_image, frame)
+
+            # Wait for all futures to complete and get results
+            person_result = future_person.result()
+            bib_result = future_bib.result()
+            depth = future_depth.result()
+        self.treat_new_frame_result(frame, frame_index, person_result, bib_result, depth)
+
     def new_frames(self, frames, frames_indexes):
-        person_results = self.person_detector.detect_persons_multiple(frames)
-        bib_results = self.bib_detector.detect_bib_multiple(frames)
-        for frame, index, person_res, bib_res in zip(frames, frames_indexes, person_results, bib_results, strict=False):
-            for bib_box in bib_res.boxes.xyxy:
-                res = self.check_bib_in_person(bib_box, person_res.boxes)
-                if res[0]:
-                    person_id = int(res[1])
-                    if person_id is None:
-                        continue
-                    cropped_bib = frame[bib_box[1].int() : bib_box[3].int(), bib_box[0].int() : bib_box[2].int()].copy()
-                    if person_id not in self.persons.keys():
-                        self.persons[person_id] = Person(person_id)
-                    self.persons[person_id].last_detected = index
-                    res = self.bib_reader.read_frame(cropped_bib)
-                    if res is not None:
-                        bib, confidence = res
-                        self.persons[person_id].detected_bib(bib, confidence)
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # Submit all three methods to the executor
+            future_person = executor.submit(self.person_detector.detect_persons_multiple, frames)
+            future_bib = executor.submit(self.bib_detector.detect_bib_multiple, frames)
+            future_depth = executor.submit(self.line.model.infer_images, frames)
+
+            # Wait for all futures to complete and get results
+            person_results = future_person.result()
+            bib_results = future_bib.result()
+            depths = future_depth.result()
+        for frame, frame_index, person_result, bib_result, depth in zip(frames, frames_indexes, person_results, bib_results, depths, strict=True):
+            self.treat_new_frame_result(frame, frame_index, person_result, bib_result, depth)
 
     def clean_detections(self):
         # We pass the biggest number available as int32 in order to flush every person detected that has not passed the line and have no bib detected

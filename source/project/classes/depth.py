@@ -1,12 +1,10 @@
-import time
-
 import cv2
 import numpy as np
 import torch
 from scipy.stats import linregress
 from sklearn.linear_model import LinearRegression
 
-from depth_anything_v2.dpt import DepthAnythingV2
+from classes.depth_anything_v2.dpt import DepthAnythingV2
 
 
 def crop_bottom_right(image, new_width, new_height):
@@ -96,17 +94,15 @@ def get_arrival_line(picture):
 
 
 class ArrivalLine:
-    def __init__(self, line: dict, encoder="vits", reversed=False, min_slope=1e-2):
+    def __init__(self, line: dict, device=torch.device(0), encoder="vits", reversed=False, min_slope=1e-2):
         self.loaded_frames = []
         self.reversed = reversed
 
         self.model = DepthAnythingV2(**MODEL_CONFIGS[encoder])
-        # TODO: Maybe we can change this map to the GPU ?
-        self.model.load_state_dict(torch.load(f"checkpoints/depth_anything_v2_{encoder}.pth", map_location="cpu"))
-        self.model.to(torch.device(0))
+        self.model.load_state_dict(torch.load(f"checkpoints/depth_anything_v2_{encoder}.pth", map_location=device))
+        self.model.to(device)
         self.persons_depth = {}
         self.min_slope = min_slope
-        self.line_depth = line["depth"]
         self.line_points = (line["start"], line["end"])
         self.line = np.array([(k, v) for k, v in ArrivalLine.get_line_pixels(self.line_points).items()])
 
@@ -140,40 +136,6 @@ class ArrivalLine:
 
         return line_pixels
 
-    def treat_result(self, depth, person_boxes):
-        def get_box_center(xyxy):
-            return int((xyxy[0] + xyxy[2]) // 2), int((xyxy[1] + xyxy[3]) // 2)
-
-        arrived = []
-        for box, id in zip(person_boxes.xyxy, person_boxes.id, strict=False):
-            id = int(id)
-            if id not in self.persons_depth.keys():
-                self.persons_depth[id] = {
-                    "depths": np.array([]),
-                    "arrived": False,
-                }
-            if self.persons_depth[id]["arrived"]:
-                continue
-            center = get_box_center(box)
-            curr_person_depth = depth[center[1]][center[0]]
-            self.persons_depth[id]["depths"] = np.append(self.persons_depth[id]["depths"], [curr_person_depth])
-            if len(self.persons_depth[id]["depths"]) > 120:
-                self.persons_depth[id]["depths"] = np.delete(self.persons_depth[id]["depths"], [0])
-            elif len(self.persons_depth[id]["depths"]) < 30:
-                continue
-            if np.isnan(res.slope):
-                continue
-
-            if res.slope < 0 - self.min_slope and self.reversed or res.slope > self.min_slope and not self.reversed:
-                # The person is moving in the right direction
-                if center[0] in self.line_depth.keys():
-                    # We get the target depth for the X of the center of the person
-                    curr_target = self.line_depth[center[0]]
-                    if (curr_person_depth < curr_target and self.reversed) or (curr_person_depth > curr_target and not self.reversed):
-                        self.persons_depth[id]["arrived"] = True
-                        arrived.append(id)
-        return arrived
-
     def treat_depth(self, depth, person_result, frame, annotate=False):
         person_boxes = person_result.boxes
         keypoints = person_result.keypoints
@@ -189,15 +151,6 @@ class ArrivalLine:
         for i, (box, id) in enumerate(zip(person_boxes.xyxy, person_boxes.id, strict=False)):
             id = int(id)
             color = (0, 0, 255)
-            if id not in self.persons_depth.keys():
-                self.persons_depth[id] = {
-                    "depths": np.array([]),
-                    "arrived": False,
-                }
-            if self.persons_depth[id]["arrived"]:
-                color = (0, 255, 0)
-                continue
-            curr_person_depth = 0
             poi = ()
             if keypoints is None:
                 poi = get_box_center(box)
@@ -209,41 +162,57 @@ class ArrivalLine:
                     poi = (left_foot[0], left_foot[1])
                 else:
                     poi = (right_foot[0], right_foot[1])
-            curr_person_depth = depth[poi[1]][poi[0]]
+            if id not in self.persons_depth.keys():
+                self.persons_depth[id] = {
+                    "depths": np.array([]),
+                    "arrived": False,
+                }
+            if self.persons_depth[id]["arrived"]:
+                color = (0, 255, 0)
+            if box[2] > frame.shape[1] - 2 or box[0] < 2:
+                continue
+            else:
+                curr_person_depth = depth[poi[1]][poi[0]]
 
-            self.persons_depth[id]["depths"] = np.append(self.persons_depth[id]["depths"], [curr_person_depth])
-            if len(self.persons_depth[id]["depths"]) > 120:
-                self.persons_depth[id]["depths"] = np.delete(self.persons_depth[id]["depths"], [0])
-            elif len(self.persons_depth[id]["depths"]) < 30:
-                continue
-            res = LinearRegression().fit(np.array(range(len(self.persons_depth[id]["depths"]))).reshape(-1, 1), self.persons_depth[id]["depths"])
-            # res = linregress(range(len(self.persons_depth[id]["depths"])), self.persons_depth[id]["depths"])
-            if np.isnan(res.coef_[0]):
-                continue
-            if res.coef_[0] < 0 - self.min_slope and self.reversed or res.coef_[0] > self.min_slope and not self.reversed:
-                # The person is moving in the right direction
-                key = str(poi[0])
-                # We check if the POI is in the right x coordinates
-                if key in self.line_depth.keys():
-                    then = time.time()
-                    valid_line_pixels = points_not_in_any_box(self.line.copy(), person_boxes.xyxy)
-                    X = valid_line_pixels[:, [0]]
-                    y = depth[valid_line_pixels[:, 1], valid_line_pixels[:, 0]]
-                    regression = LinearRegression().fit(X, y)
-                    curr_target = regression.predict(np.array(poi[0]).reshape(1, -1))[0]
-                    if (curr_person_depth < curr_target and self.reversed) or (curr_person_depth > curr_target and not self.reversed):
-                        self.persons_depth[id]["arrived"] = True
-                        arrived.append(id)
-                        color = (0, 255, 0)
-                    color = (255, 0, 0)
-                else:
-                    color = (0, 255, 255)
+                self.persons_depth[id]["depths"] = np.append(self.persons_depth[id]["depths"], [curr_person_depth])
+                if len(self.persons_depth[id]["depths"]) > 120:
+                    self.persons_depth[id]["depths"] = np.delete(self.persons_depth[id]["depths"], [0])
+                elif len(self.persons_depth[id]["depths"]) < 30:
+                    continue
+                res = LinearRegression().fit(np.array(range(len(self.persons_depth[id]["depths"]))).reshape(-1, 1), self.persons_depth[id]["depths"])
+                # res = linregress(range(len(self.persons_depth[id]["depths"])), self.persons_depth[id]["depths"])
+                if np.isnan(res.coef_[0]):
+                    continue
+                if res.coef_[0] < 0 - self.min_slope and self.reversed or res.coef_[0] > self.min_slope and not self.reversed:
+                    # The person is moving in the right direction
+
+                    # We check if the POI is in the right x coordinates
+                    if poi[0] in self.line[:, 0]:
+                        valid_line_pixels = points_not_in_any_box(self.line.copy(), person_boxes.xyxy)
+                        X = valid_line_pixels[:, [0]]
+                        y = depth[valid_line_pixels[:, 1], valid_line_pixels[:, 0]]
+                        regression = LinearRegression().fit(X, y)
+                        curr_target = regression.predict(np.array(poi[0]).reshape(1, -1))[0]
+                        if (curr_person_depth < curr_target and self.reversed) or (curr_person_depth > curr_target and not self.reversed):
+                            self.persons_depth[id]["arrived"] = True
+                            arrived.append(id)
+                            color = (0, 255, 0)
+                        color = (255, 0, 0)
+                    else:
+                        color = (0, 255, 255)
 
             if annotate:
                 cv2.circle(frame, poi, 7, color, cv2.FILLED)
         if annotate:
             cv2.line(frame, self.line_points[0], self.line_points[1], (255, 255, 0), 3)
         return arrived
+
+    def treat_depths(self, depths, persons_results, frames, annotate=False):
+        zipped = zip(depths, persons_results, frames, strict=True)
+        result = []
+        for depth, persons_result, frame in zipped:
+            result.append(self.treat_depth(depth, persons_result, frame, annotate))
+        return result
 
     def new_frame(self, frame, person_boxes, annotate=False):
         if person_boxes.id is None:
@@ -297,26 +266,3 @@ class ArrivalLine:
             x_end = x[-1]
             cv2.line(frame, (x_start, self.line[x_start]), (x_end, self.line[x_end]), (255, 255, 0), 3)
         return arrived
-
-    def load_frame(self, frame):
-        new_cuda_frame, (h, w) = self.model.image2tensor(frame)
-        self.loaded_frames.append((new_cuda_frame, h, w))
-
-    def load_batch(self, frames):
-        cuda_frames, (h, w) = self.model.images2tensor(frames)
-        return cuda_frames, h, w
-
-    def treat_batch(self, cuda_loaded, p_boxes):
-        results = []
-        depths = self.model.infer_images_cuda(*cuda_loaded)
-        for d, p_box in zip(depths, p_boxes, strict=False):
-            results.append(self.treat_result(d, p_box))
-        return results
-
-    def treat_loaded_frames(self, person_boxes):
-        results = []
-        for loaded_frame, p_box in zip(self.loaded_frames, person_boxes, strict=True):
-            d = self.model.infer_image_cuda(*loaded_frame)
-            results.append(self.treat_result(d, p_box))
-        self.loaded_frames = []
-        return results

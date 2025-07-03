@@ -1,42 +1,53 @@
 import datetime
 import json
 import logging
+import os
 
 import cv2
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
 from classes.bib_detector import PreTrainedModel
 from classes.bib_reader import OCRReader, OCRType
+from classes.depth import ArrivalLine
 from classes.person_detector import YOLOv11
+from classes.pipeline import Pipeline
 from classes.tools import get_colored_logger
-from depth import ArrivalLine
-from pipeline import Pipeline
+
+START_FRAME = 10 * 60 * 30  # 00:10:00
+START_FRAME = 135 * 60 * 30  # 02:15:00
+
+END_FRAME = 75 * 60 * 30  # 01:05:00
+END_FRAME = 220 * 60 * 30  # 03:40:00
+
+
+PARAMETER_FILE = "parameters_second_hour.json"
 
 
 def crop(frame, points):
     return frame[points[0][1] : points[1][1], points[0][0] : points[1][0]]
 
 
-logging.getLogger("ppocr").setLevel(logging.ERROR)
+runs_index = 0
+curr_path = ""
+while True:
+    curr_path = f"./results/runs/run_{runs_index}"
+    if not os.path.exists(curr_path):
+        os.makedirs(curr_path)
+        break
+    runs_index += 1
+
 logging.basicConfig(level=logging.DEBUG)
 
 logger = get_colored_logger(__name__)
-
+print(f"Processing will start. Output folder : {curr_path}")
 
 parameters = {}
 
-with open("parameters.json") as file:
+with open(PARAMETER_FILE) as file:
     parameters = json.loads("\n".join(file.readlines()))
 
-
-START_FRAME = 10 * 60 * 30
-
-# START_FRAME = 62264
-
-END_FRAME = 75 * 60 * 30
-
-# END_FRAME = 62564
 
 cap = cv2.VideoCapture("./data/recorded/merged/right_merged.mp4")
 df = pd.read_csv("./data/recorded/merged/right_merged_full.csv", header=None, names=["frame_n", "timestamp"], delimiter=";")
@@ -60,7 +71,7 @@ ANNOTATE = True
 width = parameters["crop"][1][0] - parameters["crop"][0][0]
 height = parameters["crop"][1][1] - parameters["crop"][0][1]
 if ANNOTATE:
-    writer = cv2.VideoWriter("./out.mp4", cv2.VideoWriter_fourcc(*"mp4v"), 30, frameSize=(width, height))
+    writer = cv2.VideoWriter(os.path.join(curr_path, "out.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), 30, frameSize=(width, height))
 
 
 def sequential_pipe():
@@ -84,8 +95,9 @@ def batched_pipe(batch_size=10):
             if not ret:
                 logger.info("End of recording reached")
                 break
+            frame = crop(frame, parameters["crop"])
             frames.append(frame)
-        pipeline.new_frame(frames, list(range(i, i + batch_size)))
+        pipeline.new_frames(np.array(frames), list(range(i, i + len(frames))))
 
 
 sequential_pipe()
@@ -116,5 +128,5 @@ for id, p in pipeline.persons.items():
     }
 
 
-with open("results.json", "w") as outfile:
+with open(os.path.join(curr_path, "results.json"), "w") as outfile:
     outfile.write(json.dumps(res))

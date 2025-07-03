@@ -1,6 +1,7 @@
 from time import perf_counter
-import numpy as np
+
 import cv2
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -175,12 +176,22 @@ class DepthAnythingV2(nn.Module):
     @torch.no_grad()
     def infer_image(self, raw_image, input_size=(512, 288)):
         image, (h, w) = self.image2tensor(raw_image, input_size)
-
         depth = self.forward(image)
         depth = F.interpolate(depth[:, None], (h, w), mode="bilinear", align_corners=True)[0, 0]
         result = depth.cpu().numpy()
 
         return result
+
+    @torch.no_grad()
+    def infer_images(self, raw_images, input_size=(512, 288)):
+        images, (h, w) = self.images2tensor(raw_images, input_size)
+        depths = []
+
+        for i in images:
+            depths.append(F.interpolate(self.forward(i)[:, None], (h, w), mode="bilinear", align_corners=True)[0, 0])
+        depths = torch.cat(depths, dim=0)
+
+        return depths.cpu().numpy()
 
     @torch.no_grad()
     def infer_image_cuda(self, image, h, w):
@@ -230,11 +241,9 @@ class DepthAnythingV2(nn.Module):
         return image, (h, w)
 
     def images2tensor(self, raw_images, input_size=(512, 288)):
-        images = np.array([])
+        images = []
         h, w = raw_images[0].shape[:2]
-        for raw_image in raw_images:
-
-
+        for raw_image in raw_images[0]:
             image = cv2.cvtColor(raw_image, cv2.COLOR_BGR2RGB) / 255.0
 
             transformer = Compose(
@@ -253,8 +262,8 @@ class DepthAnythingV2(nn.Module):
                 ]
             )
 
-            np.append(images, [transformer({"image": image})["image"]])
-        images = torch.from_numpy(images).unsqueeze(0)
+            images.append(transformer({"image": image})["image"])
+        images = torch.from_numpy(np.array(images)).unsqueeze(0)
 
         DEVICE = "cuda"
         images = images.to(DEVICE)

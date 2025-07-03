@@ -1,5 +1,6 @@
 import json
 import math
+import os
 
 import cv2
 import pandas as pd
@@ -10,8 +11,40 @@ from classes.tools import get_colored_logger
 logger = get_colored_logger(__name__)
 
 
+unreadable = [
+    "2083",
+    "2171",
+    "2172",
+    "2065",
+    "2112",
+    "2018",
+    "2055",
+    "2007",
+    "2170",
+    "2139",
+    "2163",
+    "2077",
+    "2046",
+    "2178",
+    "2159",
+    "2048",
+    "2025",
+    "2029",
+    "2041",
+    "2073",
+    "1129",
+]
+
+
 class OutputAnalyzer:
-    def __init__(self, official_result_filepath: str, computed_results_filepath: str, debug_video_path: str, frame_to_timestamp_filepath: str):
+    def __init__(
+        self,
+        official_result_filepath: str,
+        computed_results_filepath: str,
+        debug_video_path: str,
+        frame_to_timestamp_filepath: str,
+        remove_unreadable=True,
+    ):
         self.computed_results = self.load_computed_results(computed_results_filepath)
         self.video_cap = cv2.VideoCapture(debug_video_path)
         self.frame_arr = self.load_frames_dict(frame_to_timestamp_filepath)
@@ -23,7 +56,15 @@ class OutputAnalyzer:
         self.allowed_time_error = 10  # Time is in seconds
         self.compute_timestamp_end = self.frame_arr[self.frame_end]
         self.compute_timestamp_start = self.frame_arr[self.frame_start]
-        self.official_results = self.load_official_results(official_result_filepath)
+        self.remove_unreadable = remove_unreadable
+        if not remove_unreadable:
+            self.official_results = self.load_official_results(official_result_filepath)
+        else:
+            self.official_results = {}
+            temp = self.load_official_results(official_result_filepath)
+            for key in temp:
+                if key not in unreadable:
+                    self.official_results[key] = temp[key]
 
     def load_official_results(self, filepath: str):
         frame = pd.read_csv(filepath, delimiter=";", dtype={"Dossard": "string", "time": "float"})
@@ -52,10 +93,16 @@ class OutputAnalyzer:
 
     def show_video_clip(self, timestamp, length=10):
         frame = self.get_closest_frame(timestamp, self.frame_arr)
+
         frame_start = frame - length * self.FPS // 2
+
         frame_end = math.floor(min(frame_start + length * self.FPS, self.video_cap.get(cv2.CAP_PROP_FRAME_COUNT)))
 
         print(f"Frames : {frame_start + self.frame_start} - {frame_end + self.frame_start}")
+        if frame_start + self.frame_start == -150:
+            import ipdb
+
+            ipdb.set_trace()
         self.video_cap.set(cv2.CAP_PROP_POS_FRAMES, frame_start)
         i = 0
         while i < frame_end:
@@ -110,62 +157,44 @@ class OutputAnalyzer:
             return curr_index + found_index - self.frame_start
 
     def get_statistics(self):
-        found_bib = 0
-        wrong_detection = 0
-        mean_diff = 0
         result = {
-            "found_bib": 0,
-            "wrong_detection": 0,
+            "correct": 0,
+            "wrong_time": 0,
             "not_found": 0,
-            "mean_diff": 0,
-            "no_bib": 0,
-            "max_diff": -1,
-            "min_diff": -1,
             "detail": {
-                "founds": [],
+                "correct": [],
                 "not_found": [],
-                "wrong_detection": [],
+                "wrong_time": [],
                 "no_bib": [],
             },
         }
-        found = []
-        for key, val in self.computed_results.items():
-            bib_text = val["best_bib"]
-            computed_time = val["time"]
-            if bib_text == "":
-                # This mean we have detected someone passing the line, without reading his bib number...
-                result["no_bib"] += 1
-                result["detail"]["no_bib"].append((None, computed_time, None, key))
-            elif bib_text in self.official_results:
-                official_time = self.official_results[bib_text]
-                time_diff = abs(computed_time - official_time)
-                if time_diff > self.allowed_time_error:
-                    # Time diff is too big, we didn't read the correct number !
-                    result["wrong_detection"] += 1
-                    result["detail"]["wrong_detection"].append((bib_text, computed_time, official_time, key))
-                else:
-                    result["found_bib"] += 1
-                    result["mean_diff"] += time_diff
-                    result["detail"]["founds"].append((bib_text, computed_time, official_time, key))
-                    if result["min_diff"] == -1 or result["min_diff"] > time_diff:
-                        result["min_diff"] = time_diff
-                    if result["max_diff"] == -1 or result["max_diff"] < time_diff:
-                        result["max_diff"] = time_diff
-                found.append(bib_text)
-            else:
-                # We read a number that was not present in the result list...
-                result["detail"]["wrong_detection"].append((bib_text, computed_time, None, key))
-                result["wrong_detection"] += 1
-        for key, value in self.official_results.items():
-            if key not in found:
-                # We loop to find numbers that we missed
+        for bib, time in self.official_results.items():
+            found = False
+            for person_id, obj in self.computed_results.items():
+                if obj["best_bib"] == bib:
+                    found = True
+                    # We found the bib in the computed result
+                    time_diff = time - obj["time"]
+                    if time_diff > 0 and time_diff < self.allowed_time_error:
+                        # We found the correct bib at the correct time !
+                        result["correct"] += 1
+                    else:
+                        result["wrong_time"] += 1
+                    break
+            if not found:
                 result["not_found"] += 1
-                result["detail"]["not_found"].append((key, None, value))
 
-        # We compute the mean for the bib we found
-        if result["found_bib"] != 0:
-            result["mean_diff"] /= result["found_bib"]
         return result
+
+    def get_metrics(self, res):
+        correct = res["correct"]
+        wrong_time = res["wrong_time"]
+        missed = res["not_found"]
+        total = len(self.official_results)
+        print(f"Total bibs to detect : {total}")
+        print(f"Correct : {correct} ==> {correct / total:.2f}")
+        print(f"Wrong time : {wrong_time} ==> {wrong_time / total:.2f}")
+        print(f"Bib missed : {missed} ==> {missed / total:.2f}")
 
 
 def compare_results_details(res1, res2):
@@ -185,25 +214,18 @@ def compare_results_details(res1, res2):
         print(f"Present in 2 but not 1 : {res2_bonus}")
 
 
+run_folder = "./results/runs/run_0"
+
 parser = OutputAnalyzer(
     official_result_filepath="./data/race_results/official_base.csv",
-    computed_results_filepath="./results/results_disco_2/results.json",
-    debug_video_path="./results/results_disco_2/output.mp4",
+    computed_results_filepath=os.path.join(run_folder, "results.json"),
+    debug_video_path=os.path.join(run_folder, "out.mp4"),
     frame_to_timestamp_filepath="./data/recorded/merged/right_merged_full.csv",
 )
 
-res = parser.get_statistics()
-
 parser.apply_filtering()
 
-res2 = parser.get_statistics()
-
-# compare_results_details(res, res2)
-
-
-for key in ["found_bib", "wrong_detection", "not_found", "no_bib"]:
-    print(f"Not filtered : {key} : {res[key]}")
-    print(f"Filtered : {key} : {res2[key]}")
+res = parser.get_statistics()
 
 
 def wrong_detection_analysis(res):
@@ -230,6 +252,12 @@ def no_bib_analysis(res):
         parser.show_video_clip(timestamp=i[1])
 
 
+parser.get_metrics(res)
+
+# compare_results_details(res, res2)
+
+# wrong_dete&ction_analysis(res2)
+
 # wrong_detection_analysis(res2)
 
-no_bib_analysis(res2)
+# not_found_analysis(res2)

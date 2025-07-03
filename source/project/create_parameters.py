@@ -2,7 +2,7 @@ import json
 
 import cv2
 
-from depth import get_arrival_line
+from classes.depth import get_arrival_line
 
 points = []
 clone = []
@@ -66,7 +66,7 @@ def get_cropping_region(frame):
             return None
 
 
-FRAME = 10 * 60 * 30
+FRAME = 135 * 60 * 30
 cap = cv2.VideoCapture("./data/recorded/merged/right_merged.mp4")
 cap.set(cv2.CAP_PROP_POS_FRAMES, FRAME)
 ret, frame = cap.read()
