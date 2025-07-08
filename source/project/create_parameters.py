@@ -1,8 +1,14 @@
 import json
+import os
 
 import cv2
 
 from classes.depth import get_arrival_line
+
+# Those are the parameters to change for this script
+FOLDER = "./parameters"  # The output folder for the parameters file
+FRAME = 0  # The frame of the video to do the parameters description to
+VIDEO_FILE = "./data/depth_precision/depth_benchmark_1.mp4"  # The path to the video file
 
 points = []
 clone = []
@@ -66,8 +72,7 @@ def get_cropping_region(frame):
             return None
 
 
-FRAME = 135 * 60 * 30
-cap = cv2.VideoCapture("./data/recorded/merged/right_merged.mp4")
+cap = cv2.VideoCapture(VIDEO_FILE)
 cap.set(cv2.CAP_PROP_POS_FRAMES, FRAME)
 ret, frame = cap.read()
 assert ret
@@ -81,7 +86,7 @@ if crop_points is None:
 parameters["crop"] = [crop_points[0], crop_points[1]]
 frame = frame[crop_points[0][1] : crop_points[1][1], crop_points[0][0] : crop_points[1][0]]
 
-print("Please click to designate an arrival line, and thèen press 'S' to save")
+print("Please click to designate an arrival line, and then press 'S' to save")
 line = get_arrival_line(frame)
 
 parameters["line"] = {
@@ -89,6 +94,16 @@ parameters["line"] = {
     "end": line[1],
 }
 
+index = 0
+curr_path = ""
+while True:
+    curr_path = os.path.join(FOLDER, f"parameters_{index}.json")
+    if not os.path.exists(curr_path):
+        break
+    index += 1
 
-with open("parameters.json", "w") as file:
+
+with open(curr_path, "w") as file:
     file.write(json.dumps(parameters))
+
+print(f"Parameters saved to :  {curr_path}")

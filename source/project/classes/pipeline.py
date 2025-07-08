@@ -110,6 +110,7 @@ class Pipeline:
         self.person_detector = person_detector
         self.bib_detector = bib_detector
         self.bib_reader = bib_reader
+        self.persons = {}
         self.line = line
         # Number of frame that a person can be undetected before being treated as out of frame
         self.grace_not_detected = 300  # = 10 sec at 30FPS
@@ -189,18 +190,23 @@ class Pipeline:
             self.remove_useless_persons(frame_index)
         return self.persons
 
-    def new_frame(self, frame, frame_index, annotate=False):
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            # Submit all three methods to the executor
-            future_person = executor.submit(self.person_detector.detect_persons, frame)
-            future_bib = executor.submit(self.bib_detector.detect_bib, frame)
-            future_depth = executor.submit(self.line.model.infer_image, frame)
+    def new_frame(self, frame, frame_index, parralel=True, annotate=False):
+        if parralel:
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                # Submit all three methods to the executor
+                future_person = executor.submit(self.person_detector.detect_persons, frame)
+                future_bib = executor.submit(self.bib_detector.detect_bib, frame)
+                future_depth = executor.submit(self.line.model.infer_image, frame)
 
-            # Wait for all futures to complete and get results
-            person_result = future_person.result()
-            bib_result = future_bib.result()
-            depth = future_depth.result()
-        self.treat_new_frame_result(frame, frame_index, person_result, bib_result, depth)
+                # Wait for all futures to complete and get results
+                person_result = future_person.result()
+                bib_result = future_bib.result()
+                depth = future_depth.result()
+        else:
+            person_result = self.person_detector.detect_persons(frame)
+            bib_result = self.bib_detector.detect_bib(frame)
+            depth = self.line.model.infer_image(frame)
+        self.treat_new_frame_result(frame, frame_index, person_result, bib_result, depth, annotate=annotate)
 
     def new_frames(self, frames, frames_indexes):
         with concurrent.futures.ThreadPoolExecutor() as executor:

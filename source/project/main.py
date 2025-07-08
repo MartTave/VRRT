@@ -13,44 +13,77 @@ from classes.bib_reader import OCRReader, OCRType
 from classes.depth import ArrivalLine
 from classes.person_detector import YOLOv11
 from classes.pipeline import Pipeline
-from classes.tools import get_colored_logger
+from classes.tools import crop, get_colored_logger
 
-START_FRAME = 10 * 60 * 30  # 00:10:00
-START_FRAME = 135 * 60 * 30  # 02:15:00
+# Those are the parameters to set for the script to work
+START_FRAME = 0  # The frame at which to start
+END_FRAME = 0  # The frame number to end
+PARAMETER_FILE = ""  # The file to read parameters from (for the cropping region and the arrival line decription)
 
-END_FRAME = 75 * 60 * 30  # 01:05:00
-END_FRAME = 220 * 60 * 30  # 03:40:00
-
-
-PARAMETER_FILE = "parameters_second_hour.json"
+# You can use one of the functions below to write the parameters to some presets ones
 
 
-def crop(frame, points):
-    return frame[points[0][1] : points[1][1], points[0][0] : points[1][0]]
+RESULT_FOLDER = "./results/runs"  # The folder to save the results to
+
+ANNOTATE = True  # If you want to annotate the videos and save the annoted videos to a file
 
 
-runs_index = 0
-curr_path = ""
-while True:
-    curr_path = f"./results/runs/run_{runs_index}"
-    if not os.path.exists(curr_path):
-        os.makedirs(curr_path)
-        break
-    runs_index += 1
+TIMESTAMP_CSV = "./data/recorded/merged/right_merged_full.csv"
+SOURCE_VIDEO = "./data/recorded/merged/right_merged.mp4"
+
+
+def set_first_clip():
+    # use this function to set the global parameters for the video between 10min and 01h05
+    global START_FRAME, END_FRAME, PARAMETER_FILE
+    START_FRAME = 10 * 60 * 30  # 00:10:00
+    END_FRAME = 75 * 60 * 30  # 01:05:00
+    PARAMETER_FILE = "parameters/parameters_first_hour.json"
+    pass
+
+
+def set_second_clip():
+    # use this function to set the global parameters for the video between 02h15 and 03h40
+    global START_FRAME, END_FRAME, PARAMETER_FILE
+    START_FRAME = 135 * 60 * 30  # 02:15:00
+    END_FRAME = 220 * 60 * 30  # 03:40:00
+    END_FRAME = START_FRAME + 30 * 60
+    PARAMETER_FILE = "parameters/parameters_second_hour.json"
+    pass
+
+
+set_second_clip()
 
 logging.basicConfig(level=logging.DEBUG)
 
 logger = get_colored_logger(__name__)
+
+
+curr_path = ""
+
+
+def find_result_path():
+    global curr_path
+    runs_index = 0
+    while True:
+        curr_path = os.path.join(RESULT_FOLDER, f"run_{runs_index}")
+        if not os.path.exists(curr_path):
+            os.makedirs(curr_path)
+            break
+        runs_index += 1
+
+
+find_result_path()
 print(f"Processing will start. Output folder : {curr_path}")
 
 parameters = {}
+
 
 with open(PARAMETER_FILE) as file:
     parameters = json.loads("\n".join(file.readlines()))
 
 
-cap = cv2.VideoCapture("./data/recorded/merged/right_merged.mp4")
-df = pd.read_csv("./data/recorded/merged/right_merged_full.csv", header=None, names=["frame_n", "timestamp"], delimiter=";")
+cap = cv2.VideoCapture(SOURCE_VIDEO)
+df = pd.read_csv(TIMESTAMP_CSV, header=None, names=["frame_n", "timestamp"], delimiter=";")
 
 
 line_detector = ArrivalLine(line=parameters["line"])
@@ -62,11 +95,6 @@ pipeline = Pipeline(
     line=line_detector,
 )
 
-logger.info("Recording started")
-frame_limit = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-# frame_limit = 150_000
-
-ANNOTATE = True
 
 width = parameters["crop"][1][0] - parameters["crop"][0][0]
 height = parameters["crop"][1][1] - parameters["crop"][0][1]
@@ -82,13 +110,15 @@ def sequential_pipe():
             logger.info("End of recording reached")
             break
         frame = crop(frame, parameters["crop"])
-        pipeline.new_frame(frame, i, ANNOTATE)
+        pipeline.new_frame(frame, i, annotate=ANNOTATE, parralel=False)
         if ANNOTATE:
             writer.write(frame)
 
 
 def batched_pipe(batch_size=10):
-    for i in tqdm(range(0, frame_limit, batch_size)):
+    # !!! This code does not work for now. Take it as an example of how I would do it.
+    cap.set(cv2.CAP_PROP_POS_FRAMES, START_FRAME)
+    for i in tqdm(range(START_FRAME, END_FRAME, batch_size)):
         frames = []
         for j in range(batch_size):
             ret, frame = cap.read()

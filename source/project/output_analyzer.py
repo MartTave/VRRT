@@ -11,6 +11,8 @@ from classes.tools import get_colored_logger
 logger = get_colored_logger(__name__)
 
 
+frames_label = {}
+
 unreadable = [
     "2083",
     "2171",
@@ -33,6 +35,37 @@ unreadable = [
     "2041",
     "2073",
     "1129",
+    "10",
+    "1125",
+    "1128",
+    "1058",
+    "1067",
+    "1131",
+    "1145",
+    "1175",
+    "1039",
+    "1040",
+    "1184",
+    "1215",
+    "1199",
+    "1177",
+    "1166",
+    "1070",
+    "1123",
+    "1025",
+    "1122",
+    "1029",
+    "43",
+    "3",
+    "1109",
+    "142",
+    "36",
+    "1189",
+    "1001",
+    "1028",
+    "1211",
+    "1075",
+    "13",
 ]
 
 
@@ -91,31 +124,41 @@ class OutputAnalyzer:
             lines = file.readlines()
             return [float(l.split(";")[-1]) for l in lines]
 
-    def show_video_clip(self, timestamp, length=10):
+    def show_video_clip(self, timestamp, length=10, bib=""):
         frame = self.get_closest_frame(timestamp, self.frame_arr)
 
         frame_start = frame - length * self.FPS // 2
 
         frame_end = math.floor(min(frame_start + length * self.FPS, self.video_cap.get(cv2.CAP_PROP_FRAME_COUNT)))
 
-        print(f"Frames : {frame_start + self.frame_start} - {frame_end + self.frame_start}")
         if frame_start + self.frame_start == -150:
-            import ipdb
-
-            ipdb.set_trace()
+            raise Exception("You should not be here. Timestamp is -1")
         self.video_cap.set(cv2.CAP_PROP_POS_FRAMES, frame_start)
-        i = 0
+        i = frame_start
+        pause = False
         while i < frame_end:
+            self.video_cap.set(cv2.CAP_PROP_POS_FRAMES, i)
             ret, frame = self.video_cap.read()
             assert ret
             cv2.imshow("frame", frame)
-            key = cv2.waitKey(90)
+            key = cv2.waitKeyEx(1)
             if key == ord("q"):
                 break
-            if key == ord("r"):
+            elif key == ord("r"):
                 i = frame_start
-                self.video_cap.set(cv2.CAP_PROP_POS_FRAMES, frame_start)
-            i += 1
+            elif key == ord(" "):
+                pause = not pause
+            elif key == 65361:
+                # Left arrow!
+                i -= 1
+            elif key == 65363:
+                i += 1
+            elif key == ord("s"):
+                print(f"Timestamp saved for bib : {bib}. Frame : {i + self.frame_start}")
+                frames_label[bib] = self.frame_arr[i + self.frame_start]
+                pass
+            elif not pause:
+                i += 1
 
     def apply_filtering(self, conf_treshold=1.5):
         to_remove = []
@@ -161,11 +204,12 @@ class OutputAnalyzer:
             "correct": 0,
             "wrong_time": 0,
             "not_found": 0,
+            "no_line": 0,
             "detail": {
                 "correct": [],
                 "not_found": [],
                 "wrong_time": [],
-                "no_bib": [],
+                "no_line": [],
             },
         }
         for bib, time in self.official_results.items():
@@ -174,15 +218,23 @@ class OutputAnalyzer:
                 if obj["best_bib"] == bib:
                     found = True
                     # We found the bib in the computed result
-                    time_diff = time - obj["time"]
-                    if time_diff > 0 and time_diff < self.allowed_time_error:
-                        # We found the correct bib at the correct time !
-                        result["correct"] += 1
+                    if not obj["passed_line"]:
+                        result["no_line"] += 1
+                        result["detail"]["no_line"].append((time, bib, person_id))
                     else:
-                        result["wrong_time"] += 1
-                    break
+                        time_diff = time - obj["time"]
+                        if time_diff > 0 and time_diff < self.allowed_time_error:
+                            # We found the correct bib at the correct time !
+                            result["correct"] += 1
+                            result["detail"]["correct"].append((obj["time"], bib, person_id))
+                        else:
+                            result["wrong_time"] += 1
+                            print(f"Detected {bib} at {obj['time']} instead of {time} - Diff is : {time - obj['time']}")
+                            result["detail"]["wrong_time"].append(([obj["time"], time], bib, person_id))
+                        break
             if not found:
                 result["not_found"] += 1
+                result["detail"]["not_found"].append((time - 3, bib, None))
 
         return result
 
@@ -194,6 +246,7 @@ class OutputAnalyzer:
         print(f"Total bibs to detect : {total}")
         print(f"Correct : {correct} ==> {correct / total:.2f}")
         print(f"Wrong time : {wrong_time} ==> {wrong_time / total:.2f}")
+        print(f"Did not pass line : {res['no_line']} ==> {wrong_time / total:.2f}")
         print(f"Bib missed : {missed} ==> {missed / total:.2f}")
 
 
@@ -214,13 +267,14 @@ def compare_results_details(res1, res2):
         print(f"Present in 2 but not 1 : {res2_bonus}")
 
 
-run_folder = "./results/runs/run_0"
+run_folder = "./results/runs/second_part"
 
 parser = OutputAnalyzer(
     official_result_filepath="./data/race_results/official_base.csv",
     computed_results_filepath=os.path.join(run_folder, "results.json"),
     debug_video_path=os.path.join(run_folder, "out.mp4"),
     frame_to_timestamp_filepath="./data/recorded/merged/right_merged_full.csv",
+    remove_unreadable=True,
 )
 
 parser.apply_filtering()
@@ -228,16 +282,22 @@ parser.apply_filtering()
 res = parser.get_statistics()
 
 
-def wrong_detection_analysis(res):
-    for i in res["detail"]["wrong_detection"]:
-        if i[2] is None:
-            print(f"Detected a number that does not exists : {i[0]} was person id : {i[3]}")
-            parser.show_video_clip(timestamp=i[1])
+def analyze_details(res, cat):
+    for i in res["detail"][cat][20:50]:
+        print(f"Debugging : {i[1:]}")
+        if isinstance(i[0], float):
+            parser.show_video_clip(timestamp=i[0], bib=i[1])
         else:
-            print(f"Detected {i[0]} here. Person id : {i[3]}")
-            parser.show_video_clip(timestamp=i[1])
-            print("But it is here")
-            parser.show_video_clip(timestamp=i[2])
+            print("Saw him here : ")
+            parser.show_video_clip(timestamp=i[0][0])
+            print("Was here")
+            parser.show_video_clip(timestamp=i[0][1])
+
+
+def wrong_detection_analysis(res):
+    for i in res["detail"]["wrong_time"]:
+        print(f"Detected a number that does not exists : {i[0]} was person id : {i[2]}")
+        parser.show_video_clip(timestamp=i[1])
 
 
 def not_found_analysis(res):
@@ -257,7 +317,18 @@ parser.get_metrics(res)
 # compare_results_details(res, res2)
 
 # wrong_dete&ction_analysis(res2)
-
-# wrong_detection_analysis(res2)
+try:
+    analyze_details(res, "correct")
+except Exception:
+    pass
 
 # not_found_analysis(res2)
+
+
+import ipdb
+
+ipdb.set_trace()
+
+
+#  It is : 277743 computed
+# and 277664 in the replay :):):):

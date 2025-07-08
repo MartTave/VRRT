@@ -169,7 +169,7 @@ class ArrivalLine:
                 }
             if self.persons_depth[id]["arrived"]:
                 color = (0, 255, 0)
-            if box[2] > frame.shape[1] - 2 or box[0] < 2:
+            elif box[2] > frame.shape[1] - 2 or box[0] < 2:
                 continue
             else:
                 curr_person_depth = depth[poi[1]][poi[0]]
