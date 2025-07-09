@@ -2,7 +2,6 @@ import concurrent.futures
 
 import cv2
 import numpy as np
-
 from classes.bib_detector import BibDetector
 from classes.bib_reader import BibReader
 from classes.depth import ArrivalLine
@@ -153,7 +152,7 @@ class Pipeline:
             # If no person are detected, we can't do anyhting...
             return frames
 
-        arrived = self.line.treat_depth(depth, person_result, frame, self.annotate)
+        arrived = self.line.treat_depth(depth, person_result, frames["annoted"], self.annotate)
 
         for p_id in person_result.boxes.id:
             p_id = int(p_id)

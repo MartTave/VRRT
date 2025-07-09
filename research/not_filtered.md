@@ -36,7 +36,7 @@
 
 Two cameras will be necessary, but maybe a third to detect the line itself ? Or two, one to detect bib, and the other one to detect the timing precisly ? I think it can be flexible on that
 
-Global shutter might be a good idea, might help to avoid motion blur for fast moving object.
+Fast exposure time might be a good idea, might help to avoid motion blur for fast moving object.
 
 We may need to have a big baseline (distance between the two cameras) in order to have a good precision at range of 5-20 meters. Apparently, focal length is a criteria too for precision for stereo setup
 
