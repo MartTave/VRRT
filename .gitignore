@@ -1,6 +1,11 @@
-data
+data/*/**
+models/*/**
+results/*/**
 .venv
 *.lock
 __pycache__
 output
-models
+debug
+result
+.obsidian
+checkpoints

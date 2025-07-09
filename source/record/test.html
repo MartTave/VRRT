@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Current Time with Milliseconds</title>
+        <style></style>
+    </head>
+    <body>
+        <h1 id="clock">Loading...</h1>
+
+        <script>
+            function updateClock() {
+                const now = new Date();
+                const timeString =
+                    now.toLocaleTimeString("en-US", { hour12: false }) +
+                    "." +
+                    now.getMilliseconds().toString().padStart(3, "0");
+                document.getElementById("clock").textContent = timeString;
+                requestAnimationFrame(updateClock);
+            }
+
+            updateClock();
+        </script>
+    </body>
+</html>

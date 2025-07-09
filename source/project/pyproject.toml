@@ -1,0 +1,45 @@
+[project]
+name = "project"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11, <3.12"
+dependencies = [
+    "opencv-contrib-python>=4.11.0.86",
+    "pandas>=2.2.3",
+    "pytesseract>=0.3.13",
+    "tdqm>=0.0.1",
+    "ultralytics>=8.3.143",
+    "paddlepaddle-gpu==3.0.0",
+    "overrides>=7.7.0",
+    "numpy==1.26.0",
+    "lap>=0.5.12",
+    "transformers>=4.52.4",
+    "tensorflow>=2.19.0",
+    "gradio-imageslider>=0.0.20",
+    "gradio==4.29.0",
+    "matplotlib>=3.10.3",
+    "torch>=2.0.1",
+    "torchvision>=0.15.2",
+    "opencv-python>=4.11.0.86",
+    "paddleocr>=2.10.0",
+    "scikit-learn>=1.7.0",
+]
+
+[dependency-groups]
+dev = [
+    "ipdb>=0.13.13",
+]
+
+[tool.uv]
+override-dependencies = [
+    "opencv-python-headless; sys_platform == 'never'",
+]
+
+[tool.uv.sources]
+paddlepaddle-gpu = { index = "paddlepaddle-gpu" }
+
+[[tool.uv.index]]
+name = "paddlepaddle-gpu"
+url = "https://www.paddlepaddle.org.cn/packages/stable/cu126/"
+explicit = true

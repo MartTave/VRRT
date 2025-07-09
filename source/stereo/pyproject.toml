@@ -1,0 +1,22 @@
+[project]
+name = "test"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "matplotlib>=3.9.4",
+    "opencv-contrib-python>=4.11.0.86",
+    "opencv-python>=4.11.0.86",
+    "pillow>=11.2.1",
+    "requests>=2.32.3",
+    "torch>=2.7.0",
+    "torchaudio>=2.7.0",
+    "torchvision>=0.22.0",
+    "transformers>=4.52.3",
+]
+
+[dependency-groups]
+dev = [
+    "ipdb>=0.13.13",
+]
