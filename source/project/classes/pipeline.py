@@ -1,6 +1,7 @@
 import concurrent.futures
 
 import cv2
+import numpy as np
 
 from classes.bib_detector import BibDetector
 from classes.bib_reader import BibReader
@@ -42,7 +43,8 @@ def treat_bib_result(args):
 
 
 def box_to_points(box):
-    return (int(box[0]), int(box[1])), (int(box[2]), int(box[3]))
+    arr = box.numpy().astype(np.int32)
+    return arr[:2], arr[2:]
 
 
 class Bib:
@@ -106,7 +108,17 @@ class Pipeline:
     bib_reader: BibReader
     persons: dict[int, Person] = {}
 
-    def __init__(self, person_detector: PersonDetector, bib_detector: BibDetector, bib_reader: BibReader, line: ArrivalLine):
+    def __init__(
+        self,
+        person_detector: PersonDetector,
+        bib_detector: BibDetector,
+        bib_reader: BibReader,
+        line: ArrivalLine,
+        annotate=False,
+        detail_annotate=False,
+    ):
+        self.annotate = annotate
+        self.detail_annotate = detail_annotate
         self.person_detector = person_detector
         self.bib_detector = bib_detector
         self.bib_reader = bib_reader
@@ -123,12 +135,25 @@ class Pipeline:
             if v.passed_line or len(v.bibs) > 0 or current_frame_index - v.last_detected < self.grace_not_detected
         }
 
-    def treat_new_frame_result(self, frame, frame_index, person_result, bib_result, depth, annotate=False):
+    def keep_only_boxes(self, frame, boxes):
+        mask = np.zeros_like(frame)
+        if boxes.device != "cpu":
+            boxes = boxes.cpu()
+        for b in boxes:
+            points = box_to_points(b)
+            cv2.rectangle(mask, points[0], points[1], (255, 255, 255), thickness=cv2.FILLED)
+        masked_image = frame.copy()
+        masked_image = cv2.bitwise_and(masked_image, mask)
+        return masked_image
+
+    def treat_new_frame_result(self, frame, frame_index, person_result, bib_result, depth):
+        frames = {"annoted": frame.copy()}
+
         if person_result is None or len(person_result.boxes.xyxy) == 0:
             # If no person are detected, we can't do anyhting...
-            return []
+            return frames
 
-        arrived = self.line.treat_depth(depth, person_result, frame, annotate)
+        arrived = self.line.treat_depth(depth, person_result, frame, self.annotate)
 
         for p_id in person_result.boxes.id:
             p_id = int(p_id)
@@ -139,7 +164,12 @@ class Pipeline:
                 self.persons[p_id].frame_passed_line = frame_index
             self.persons[p_id].last_detected = frame_index
 
+        if self.detail_annotate:
+            frames["person"] = self.keep_only_boxes(frame, person_result.boxes.xyxy)
+
         if bib_result is not None:
+            if self.detail_annotate:
+                frames["bib"] = self.keep_only_boxes(frame, bib_result.boxes.xyxy)
             for bib_box in bib_result.boxes.xyxy:
                 res = check_bib_in_person(bib_box, person_result.boxes)
                 if res[0]:
@@ -152,7 +182,7 @@ class Pipeline:
                     if res is not None:
                         bib, confidence = res
                         self.persons[person_id].detected_bib(bib, confidence)
-        if annotate:
+        if self.annotate:
             for box, id in zip(person_result.boxes.xyxy, person_result.boxes.id, strict=False):
                 id = int(id)
                 curr_pers = self.persons[id]
@@ -169,28 +199,36 @@ class Pipeline:
                 text_2 = f"Bib {bib_text}"
                 # Draw box around person
                 person_points = box_to_points(box)
-                cv2.rectangle(frame, person_points[0], person_points[1], color=color)
+                cv2.rectangle(frames["annoted"], person_points[0], person_points[1], color=color)
 
                 # Draw text for person info
                 cv2.putText(
-                    frame,
+                    frames["annoted"],
                     text_1,
                     (person_points[0][0], person_points[0][1] - 14),
                     fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                     fontScale=0.5,
                     color=(255, 0, 255),
                 )
-                cv2.putText(frame, text_2, person_points[0], fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=bib_color)
+                cv2.putText(
+                    frames["annoted"], text_2, person_points[0], fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=bib_color, thickness=1
+                )
             if bib_result is not None:
-                for box in bib_result.boxes.xyxy:
+                for box in bib_result.boxes.xyxy.cpu():
                     points = box_to_points(box)
-                    cv2.rectangle(frame, points[0], points[1], color=(255, 0, 255))
-
+                    cv2.rectangle(frames["annoted"], points[0], points[1], color=(255, 0, 255))
+            cv2.line(frames["annoted"], self.line.line_points[0], self.line.line_points[1], (255, 255, 0), 3)
+            if self.detail_annotate:
+                new_frame = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
+                new_frame = new_frame.astype(np.uint8)
+                new_frame = cv2.applyColorMap(new_frame, cv2.COLORMAP_JET)
+                new_frame = cv2.line(new_frame, self.line.line_points[0], self.line.line_points[1], (255, 0, 255), 3)
+                frames["depth"] = new_frame
         if frame_index % 10 == 0:
             self.remove_useless_persons(frame_index)
-        return self.persons
+        return frames
 
-    def new_frame(self, frame, frame_index, parralel=True, annotate=False):
+    def new_frame(self, frame, frame_index, parralel=True):
         if parralel:
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 # Submit all three methods to the executor
@@ -206,7 +244,7 @@ class Pipeline:
             person_result = self.person_detector.detect_persons(frame)
             bib_result = self.bib_detector.detect_bib(frame)
             depth = self.line.model.infer_image(frame)
-        self.treat_new_frame_result(frame, frame_index, person_result, bib_result, depth, annotate=annotate)
+        return self.treat_new_frame_result(frame, frame_index, person_result, bib_result, depth)
 
     def new_frames(self, frames, frames_indexes):
         with concurrent.futures.ThreadPoolExecutor() as executor:

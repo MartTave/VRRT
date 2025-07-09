@@ -10,38 +10,19 @@ from typing_extensions import Sequence
 
 
 def get_common_corners(corners1, ids1, corners2, ids2):
-    """Return corners and ids present in both images.
-
-    Args:
-        corners1: List of corners from first image
-        ids1: List of corresponding ids from first image
-        corners2: List of corners from second image
-        ids2: List of corresponding ids from second image
-
-    Returns:
-        common_corners1: Corners from first image that exist in both
-        common_corners2: Corners from second image that exist in both
-        common_ids: IDs that exist in both images
-
-    """
     assert ids1 is not None and ids2 is not None and len(ids1) != 0 and len(ids2) != 0
 
-    # Convert ids to 1D arrays for easier handling
     ids1_flat = ids1.flatten()
     ids2_flat = ids2.flatten()
 
-    # Find intersection of ids
     common_ids = np.intersect1d(ids1_flat, ids2_flat)
 
     if len(common_ids) == 0:
         return [], [], []
 
-    # Get indices of common ids in each image
     idx1 = np.where(np.isin(ids1_flat, common_ids))[0]
     idx2 = np.where(np.isin(ids2_flat, common_ids))[0]
 
-    # Ensure the order matches
-    # We need to reorder one set of corners so the ids align
     order1 = np.argsort(ids1_flat[idx1])
     order2 = np.argsort(ids2_flat[idx2])
 
@@ -64,13 +45,7 @@ def get_points(img, board, charuco_detector):
 
     except:
         print("No arcuo detected in this pics !")
-        # cv2.imshow("frame", img)
-        # while True:
-        #     key = cv2.waitKey(1)
-        #     if key == ord("q"):
-        #         break
         return None, None, None, None
-        # raise Exception("uh oh")
 
     return charuco_corners, cast(MatLike, charuco_ids), obj_points, img_points
 
@@ -93,25 +68,6 @@ def get_aruco_detector():
 
 def get_charuco_detector():
     return aruco.CharucoDetector(get_charuco_board())
-
-
-def calibrate_camera(pattern, min_detect=4):
-    dictionary = get_charuco_dict()
-    board = get_charuco_board()
-
-    detector = get_aruco_detector()
-
-    charuco_detector = get_charuco_detector()
-
-    all_corners = []
-    all_ids = []
-    for pic in pattern:
-        im = cv2.imread(pic, cv2.IMREAD_GRAYSCALE)
-
-        corners, ids, _ = detector.detectMarkers(im)
-
-        if ids is not None and len(ids) > min_detect:
-            retval, charuco_corners, charuco_ids = cv2.aruco.interpolateCornersCharuco(markerCorners=corners, markerIds=ids, image=im, board=board)
 
 
 def calibrate_from_pics(path, save_results=True):

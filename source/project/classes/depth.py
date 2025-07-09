@@ -203,8 +203,6 @@ class ArrivalLine:
 
             if annotate:
                 cv2.circle(frame, poi, 7, color, cv2.FILLED)
-        if annotate:
-            cv2.line(frame, self.line_points[0], self.line_points[1], (255, 255, 0), 3)
         return arrived
 
     def treat_depths(self, depths, persons_results, frames, annotate=False):

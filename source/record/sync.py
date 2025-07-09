@@ -42,23 +42,15 @@ frames2 = []
 async def reading():
     start = time.time()
     for i in range(30 * 5):
-        # Grab frames ASAP (minimal delay between cameras)
         before = time.time()
         cap1.grab()
         cap2.grab()
         print(f"Took : {time.time() - before}")
 
-        # Retrieve frames (slightly slower, but grabbed at near-same time)
         frame1, frame2 = await asyncio.gather(read_frame(cap1), read_frame(cap2))
-        # in_loop = time.time()
-        # _, frame1 = cap1.read()
-        # step1 = time.time()
-        # _, frame2 = cap2.read()
-        # step2 = time.time()
 
         frames1.append(frame1)
         frames2.append(frame2)
-        # print(f"Took : {time.time() - in_loop} - {step1 - in_loop} - {step2 - step1}")
     print(f"FPS : {(30 * 5) / (time.time() - start)}")
 
 

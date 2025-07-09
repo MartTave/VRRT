@@ -26,7 +26,7 @@ PARAMETER_FILE = ""  # The file to read parameters from (for the cropping region
 RESULT_FOLDER = "./results/runs"  # The folder to save the results to
 
 ANNOTATE = True  # If you want to annotate the videos and save the annoted videos to a file
-
+DETAIL_ANNOTATE = True  # If you want all the detailed vizu (depth picture, person detection, bib detection)
 
 TIMESTAMP_CSV = "./data/recorded/merged/right_merged_full.csv"
 SOURCE_VIDEO = "./data/recorded/merged/right_merged.mp4"
@@ -46,17 +46,20 @@ def set_second_clip():
     global START_FRAME, END_FRAME, PARAMETER_FILE
     START_FRAME = 135 * 60 * 30  # 02:15:00
     END_FRAME = 220 * 60 * 30  # 03:40:00
-    END_FRAME = START_FRAME + 30 * 60
     PARAMETER_FILE = "parameters/parameters_second_hour.json"
     pass
 
 
-set_second_clip()
+set_first_clip()
 
 logging.basicConfig(level=logging.DEBUG)
 
 logger = get_colored_logger(__name__)
 
+
+if DETAIL_ANNOTATE and not ANNOTATE:
+    logger.warning("If DETAIL_ANNOTATE is True, ANNOTATE needs to be true too. correcting")
+    ANNOTATE = True
 
 curr_path = ""
 
@@ -73,7 +76,7 @@ def find_result_path():
 
 
 find_result_path()
-print(f"Processing will start. Output folder : {curr_path}")
+logger.info(f"Processing will start. Output folder : {curr_path}")
 
 parameters = {}
 
@@ -93,6 +96,8 @@ pipeline = Pipeline(
     bib_detector=PreTrainedModel("./models/fine_tuned/best.pt"),
     bib_reader=OCRReader(type=OCRType.PADDLE),
     line=line_detector,
+    annotate=ANNOTATE,
+    detail_annotate=True,
 )
 
 
@@ -100,6 +105,10 @@ width = parameters["crop"][1][0] - parameters["crop"][0][0]
 height = parameters["crop"][1][1] - parameters["crop"][0][1]
 if ANNOTATE:
     writer = cv2.VideoWriter(os.path.join(curr_path, "out.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), 30, frameSize=(width, height))
+if DETAIL_ANNOTATE:
+    depth_writer = cv2.VideoWriter(os.path.join(curr_path, "out_depth.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), 30, frameSize=(width, height))
+    person_writer = cv2.VideoWriter(os.path.join(curr_path, "out_person.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), 30, frameSize=(width, height))
+    bib_writer = cv2.VideoWriter(os.path.join(curr_path, "out_bib.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), 30, frameSize=(width, height))
 
 
 def sequential_pipe():
@@ -110,9 +119,16 @@ def sequential_pipe():
             logger.info("End of recording reached")
             break
         frame = crop(frame, parameters["crop"])
-        pipeline.new_frame(frame, i, annotate=ANNOTATE, parralel=False)
+        frames = pipeline.new_frame(frame, i, parralel=True)
         if ANNOTATE:
-            writer.write(frame)
+            writer.write(frames["annoted"])
+        if DETAIL_ANNOTATE:
+            black_frame = np.zeros((height, width, 3), dtype=np.uint8)
+            depth_writer.write(frames["depth"] if "depth" in frames else black_frame)
+            person_writer.write(frames["person"] if "person" in frames else black_frame)
+            bib_writer.write(frames["bib"] if "bib" in frames else black_frame)
+        if i % 10000 == 0:
+            logger.info(f"Done frame {i - START_FRAME}/{END_FRAME - START_FRAME}")
 
 
 def batched_pipe(batch_size=10):
@@ -134,6 +150,7 @@ sequential_pipe()
 if ANNOTATE:
     writer.release()
 
+pipeline.clean_detections()
 res = {
     "frame_start": START_FRAME,
     "frame_end": END_FRAME,

@@ -1,6 +1,0 @@
-BootStrap: docker
-From: ghcr.io/astral-sh/uv:bookworm-slim
-
-%post
-    apt-get -y update
-    apt-get install

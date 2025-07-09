@@ -12,6 +12,7 @@ frame_queue = queue.Queue(maxsize=100)  # Adjust size depending on memory
 stop_event = threading.Event()  # Signal for clean shutdown
 
 
+# This function is here as a quick way to set all the right parameters for the camera captures
 def get_capture(id, frame_width, frame_height, fps):
     cap = cv2.VideoCapture(id, cv2.CAP_V4L2)
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
@@ -23,6 +24,7 @@ def get_capture(id, frame_width, frame_height, fps):
     return cap
 
 
+# This is the frunction which reads frames from the cameras and put them in the queue
 def camera_reader(target_id, frame_width, frame_height, fps):
     cap = get_capture(target_id, frame_width=frame_width, frame_height=frame_height, fps=fps)
 
@@ -48,17 +50,13 @@ def camera_reader(target_id, frame_width, frame_height, fps):
     cap.release()
 
 
+# This is a helper function to get the next filenames in order to avoid override
 def get_filename(prefix="video"):
     now = datetime.now()
     return (
         f"{prefix}_{now.day:02}.{now.month:02}.{now.year:2}_{now.hour:02}:{now.minute:02}:{now.second:02}.mp4",
         f"{prefix}_{now.day:02}.{now.month:02}.{now.year:2}_{now.hour:02}:{now.minute:02}:{now.second:02}.txt",
     )
-
-
-def get_formatted_timestamp(timestamp):
-    dt = datetime.fromtimestamp(timestamp)
-    return dt.strftime("%H:%M:%S.%f")[:-3]  # Truncate last 3 digits to get milliseconds
 
 
 # Thread to write frames to file
@@ -95,6 +93,7 @@ def video_writer(dest_folder, fps, frame_width, frame_height):
     out.release()
 
 
+# Thread to view frames
 def video_viewer():
     while not stop_event.is_set():
         try:
@@ -106,21 +105,18 @@ def video_viewer():
 
 
 if __name__ == "__main__":
-    # Start threads
 
     def set_args_parser():
-        # Shared arguments (not the main parser)
+        # Parts of this parser where generated using Deepseek before rewritting and correction by me
         shared_parser = argparse.ArgumentParser(add_help=False)
         shared_parser.add_argument("--camera", type=int, help="The camera stream to capture", required=True)
         shared_parser.add_argument("--fps", type=int, help="The FPS at which to capture the stream", default=30)
         shared_parser.add_argument("--width", type=int, help="The width of the frame to capture", default=1920)
         shared_parser.add_argument("--height", type=int, help="The height of the frame to capture", default=1080)
 
-        # Main parser (top-level)
         main_parser = argparse.ArgumentParser()
         subparser = main_parser.add_subparsers(dest="mode", required=True, help="Mode of operation")
 
-        # Subcommands
         record_parser = subparser.add_parser("record", parents=[shared_parser], help="Record camera stream")
         record_parser.add_argument("--output", type=str, required=True, help="The output folder for the videos")
 
@@ -130,7 +126,6 @@ if __name__ == "__main__":
 
     main_parser = set_args_parser()
 
-    # Parse
     args = main_parser.parse_args()
 
     reader_thread = threading.Thread(target=camera_reader, args=(args.camera, args.width, args.height, args.fps), daemon=True)
@@ -139,7 +134,6 @@ if __name__ == "__main__":
     if args.mode == "record":
         writer_thread = None
 
-        # Keep main thread alive
         try:
             while True:
                 writer_thread = threading.Thread(target=video_writer, args=(args.output, args.fps, args.width, args.height), daemon=True)

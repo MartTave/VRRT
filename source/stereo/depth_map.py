@@ -165,8 +165,7 @@ def get_depth_map(filename, img_left, img_right):
         # cv2.imshow("depth", depth_vis)
         # Displaying the disparity map
         cv2.imshow("disp", disparity)
-        # Close window using esc key
-        if cv2.waitKey(10) == 27:
+        if cv2.waitKey(10) == ord("q"):
             break
 
 
