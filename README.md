@@ -23,18 +23,18 @@ For the installation of the sub-projects, you can refeir to their README. But th
 
 ### Bib detection
 
-The `bib_detection` sub folder contains all the code for fine-tuning a YOLOv11 model, completing and inspecting a YOLOv11 dataset.
+The [`bib_detection`](./source/bib_detection/README.md) sub folder contains all the code for fine-tuning a YOLOv11 model, completing and inspecting a YOLOv11 dataset.
 
 ### Stereo
 
-The `stereo` sub folder contains all the code for calibrating a stereo setup, rectifying images, estimating depth using diverse algorithms.
+The [`stereo`](./source/stereo/README.md) sub folder contains all the code for calibrating a stereo setup, rectifying images, estimating depth using diverse algorithms.
 
 ### Record
 
-The `record` sub folder contains all the code for recording video using a single camera or a stereo setup. This include a 'best-effort' syncronization between two cameras for a makeshift stereo setup.
+The [`record`](./source/record/README.md) sub folder contains all the code for recording video using a single camera or a stereo setup. This include a 'best-effort' syncronization between two cameras for a makeshift stereo setup.
 
 This is the code used to gather most of the data used in this project.
 
 ### Project
 
-The `project` sub folder is the main project folder. This contains all the final pipeline, using the byproduct of the others subfolders (the data from `./record`, the fine-tuned model from `./bib_detection`)
+The [`project`](./source/project/README.md) sub folder is the main project folder. This contains all the final pipeline, using the byproduct of the others subfolders (the data from `./record`, the fine-tuned model from `./bib_detection`)
