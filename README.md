@@ -2,6 +2,8 @@
 
 This repository contains the solution for the VRRT bachelor thesis.
 
+## Teaser
+
 ## Structure
 
 This repository is structured  as follow :

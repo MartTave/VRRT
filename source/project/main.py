@@ -6,14 +6,13 @@ import os
 import cv2
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
-
 from classes.bib_detector import PreTrainedModel
 from classes.bib_reader import OCRReader, OCRType
 from classes.depth import ArrivalLine
 from classes.person_detector import YOLOv11
 from classes.pipeline import Pipeline
 from classes.tools import crop, get_colored_logger
+from tqdm import tqdm
 
 # Those are the parameters to set for the script to work
 START_FRAME = 0  # The frame at which to start
@@ -50,7 +49,7 @@ def set_second_clip():
     pass
 
 
-set_first_clip()
+set_second_clip()
 
 logging.basicConfig(level=logging.DEBUG)
 
