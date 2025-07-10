@@ -5,14 +5,13 @@ from glob import glob
 
 import cv2
 import torch
-from tqdm import tqdm
-
 from classes.bib_detector import PreTrainedModel
 from classes.bib_reader import OCRReader, OCRType
 from classes.depth import ArrivalLine
 from classes.depth_anything_v2.dpt import DepthAnythingV2
 from classes.person_detector import YOLOv11
 from classes.pipeline import Pipeline
+from tqdm import tqdm
 
 
 def generate_depth_speed_benchmark():
@@ -181,9 +180,6 @@ def compare_label_to_video():
         diffs.append(value - computed_time)
         mean += abs(diffs[-1])
     mean /= len(labels.keys())
-    import ipdb
-
-    ipdb.set_trace()
 
 
 compare_label_to_video()
