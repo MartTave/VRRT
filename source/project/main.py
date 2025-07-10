@@ -27,7 +27,7 @@ RESULT_FOLDER = "./results/runs"  # The folder to save the results to
 ANNOTATE = True  # If you want to annotate the videos and save the annoted videos to a file
 DETAIL_ANNOTATE = True  # If you want all the detailed vizu (depth picture, person detection, bib detection)
 
-TIMESTAMP_CSV = "./data/recorded/merged/right_merged_full.csv"
+TIMESTAMP_CSV = "./data/recorded/merged/right_merged.csv"
 SOURCE_VIDEO = "./data/recorded/merged/right_merged.mp4"
 
 

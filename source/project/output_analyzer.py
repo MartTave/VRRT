@@ -4,9 +4,8 @@ import os
 
 import cv2
 import pandas as pd
-from dateutil.parser import parse
-
 from classes.tools import get_colored_logger
+from dateutil.parser import parse
 
 logger = get_colored_logger(__name__)
 
@@ -267,13 +266,15 @@ def compare_results_details(res1, res2):
         print(f"Present in 2 but not 1 : {res2_bonus}")
 
 
+# This folders need to contain the video if you want to do video analysis
+# But the results.json is MANDATORY
 run_folder = "./results/runs/second_part"
 
 parser = OutputAnalyzer(
     official_result_filepath="./data/race_results/official_base.csv",
     computed_results_filepath=os.path.join(run_folder, "results.json"),
     debug_video_path=os.path.join(run_folder, "out.mp4"),
-    frame_to_timestamp_filepath="./data/recorded/merged/right_merged_full.csv",
+    frame_to_timestamp_filepath="./data/recorded/merged/right_merged.csv",
     remove_unreadable=True,
 )
 

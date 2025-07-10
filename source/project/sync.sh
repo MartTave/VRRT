@@ -1,6 +1,6 @@
 rsync -rzLv \
     --include='data/right_merged.mp4' \
-    --include='data/right_merged_full.csv' \
+    --include='data/right_merged.csv' \
     --exclude='data' \
     --exclude='.venv' \
     --exclude='__pycache__' \
