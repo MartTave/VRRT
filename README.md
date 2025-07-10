@@ -4,6 +4,8 @@ This repository contains the solution for the VRRT bachelor thesis.
 
 ## Teaser
 
+![Result teaser](./assets/merged.jpg)
+
 ## Structure
 
 This repository is structured  as follow :
