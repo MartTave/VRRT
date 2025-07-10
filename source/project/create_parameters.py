@@ -2,13 +2,17 @@ import json
 import os
 
 import cv2
-
+import numpy as np
 from classes.depth import get_arrival_line
 
 # Those are the parameters to change for this script
 FOLDER = "./parameters"  # The output folder for the parameters file
 FRAME = 0  # The frame of the video to do the parameters description to
+
+# Select one of the two sources below
 VIDEO_FILE = "./data/depth_precision/depth_benchmark_1.mp4"  # The path to the video file
+PICTURE_FILE = ""
+CAMERA_INDEX = -1
 
 points = []
 clone = []
@@ -72,12 +76,25 @@ def get_cropping_region(frame):
             return None
 
 
-cap = cv2.VideoCapture(VIDEO_FILE)
-cap.set(cv2.CAP_PROP_POS_FRAMES, FRAME)
-ret, frame = cap.read()
-assert ret
-
+frame = np.array([])
 parameters = {}
+
+
+if VIDEO_FILE != "":
+    cap = cv2.VideoCapture(VIDEO_FILE)
+    cap.set(cv2.CAP_PROP_POS_FRAMES, FRAME)
+    ret, curr_frame = cap.read()
+    assert ret
+    frame = curr_frame
+
+if PICTURE_FILE != "":
+    frame = cv2.imread(PICTURE_FILE)
+
+if CAMERA_INDEX != -1:
+    cap = cv2.VideoCapture(CAMERA_INDEX)
+    ret, curr_frame = cap.read()
+    assert ret
+    frame = curr_frame
 
 crop_points = get_cropping_region(frame)
 if crop_points is None:

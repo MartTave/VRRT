@@ -32,3 +32,15 @@ In the root of this folder is every script you can launch directly. This means t
 - `person_detector.py` - This file contains the abstract classe and an example implementation of it for the person detection
 - `pipeline.py` - This file contains the code responsible for the integration of all the above
 - `tools.py` - This file contains helper functions
+
+
+## Usage
+
+To use the solution two things are needed :
+
+- The two points defining the croppping region
+- The two points defining the arrival line
+
+To create those, you can run `uv run create_parameters.json`. In this file, you can choose the source from the frame on which to pick the cropping region and the arrival line. You can choose between a video file (and a specific frame from it), a image file, or a webcam directy.
+
+Once the parameter file has been createdm you can then either run the `main.py` file, which contain an example of usage of the pipeline class, or you can create you own file based on it !

@@ -1,15 +1,11 @@
 import json
-import os
 import logging
-from easyocr.detection import cv2
+import os
 
-# from classes.bib_detector import PreTrainedModel
 from classes.bib_reader import OCRReader, OCRType
-from ultralytics import YOLO
 from detectors import cropFromBoxes
-# from classes.person_detector import YOLOv11
-# from pipeline import Pipeline
-
+from easyocr.detection import cv2
+from ultralytics import YOLO
 
 logging.basicConfig(level=logging.INFO)
 
@@ -22,8 +18,10 @@ with open(dir + "labels.json") as file:
     lines = file.readlines()
     labels = json.loads("\n".join(lines))
 
+
 def get_filename(index):
     return f"pic_{str(index).zfill(3)}.png"
+
 
 def get_file_index(filename):
     index = str(int("".join(filename.split(".")[:-1]).split("_")[-1]))
@@ -51,8 +49,6 @@ for f in files:
     cropped = cropFromBoxes(frame, boxes)
     read = []
     for c in cropped:
-        # cv2.imshow("frame", c)
-        # cv2.waitKey()
         text = ocr.read_frame(c)
         if text is None:
             continue

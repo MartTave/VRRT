@@ -49,7 +49,7 @@ def set_second_clip():
     pass
 
 
-set_second_clip()
+set_first_clip()
 
 logging.basicConfig(level=logging.DEBUG)
 
