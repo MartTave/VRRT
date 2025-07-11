@@ -15,6 +15,7 @@ from tqdm import tqdm
 
 
 def generate_depth_speed_benchmark():
+    # This benchmark is here to test performances and result of different model size and input quality
     def crop_bottom_right(image, new_width, new_height):
         height, width = image.shape[:2]
         x = width - new_width
@@ -37,6 +38,8 @@ def generate_depth_speed_benchmark():
         frames.append(crop_bottom_right(frame, 1280, 720))
 
     encoder = "vits"  # or 'vits', 'vitb', 'vitg'
+
+    # We generate data for vits and vitb, with all sort of 16:9 resolutions in order to select the best one for our use case
     for encoder in ["vits", "vitb"]:
         for size in [(128, 72), (256, 144), (384, 216), (512, 288), (640, 360), (1280, 720)]:
             model = DepthAnythingV2(**model_configs[encoder])
@@ -67,6 +70,9 @@ def generate_depth_speed_benchmark():
 
 
 def generate_depth_precision_benchmark():
+    # This benchmark is here to assert the precision of the arrival line detection
+    # Using the dataset created for this project
+
     VIDEO_FILENAME = "depth_benchmark_1.mp4"
 
     TIMESTAMP_FILENAME = VIDEO_FILENAME.replace(".mp4", ".txt")
@@ -105,6 +111,7 @@ def generate_depth_precision_benchmark():
     res = {}
 
     def get_closest_frame(timestamp, arr, found_index=0):
+        # Get the closest frame index from a timestamp
         if len(arr) == 1 or len(arr) == 0:
             return found_index
         curr_index = len(arr) // 2
@@ -124,6 +131,8 @@ def generate_depth_precision_benchmark():
     serie_keys = ["body", "foot"]
 
     diffs = {}
+    # Here we run the pipeline on each video, to detect the time of arrival.
+    # And we then compare it to the manual timing
     for serie_key in serie_keys:
         diffs[serie_key] = []
         for key, value in labels[serie_key].items():
@@ -162,6 +171,8 @@ def generate_depth_precision_benchmark():
 
 
 def compare_label_to_video():
+    # this function is here to compare arrival time generated from a race video
+    # To the one generated manually by looking at the video
     outlier = ["98"]
 
     labels = json.load(open("./data/frame_labels/bib_time_label.json"))

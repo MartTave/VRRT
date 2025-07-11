@@ -15,8 +15,6 @@ def set_props(cap):
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 360)
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-    # cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
-    # cap.set(cv2.CAP_PROP_EXPOSURE, 20)
 
 
 cap1 = cv2.VideoCapture(2)
@@ -43,6 +41,8 @@ async def reading():
     start = time.time()
     for i in range(30 * 5):
         before = time.time()
+        # This is here to only grab the frame (not decoding them)
+        # Allows for a better sync, but worse performance
         cap1.grab()
         cap2.grab()
         print(f"Took : {time.time() - before}")

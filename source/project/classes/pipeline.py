@@ -12,6 +12,7 @@ logger = get_colored_logger(__name__)
 
 
 def check_bib_in_person(bib_box, person_boxes):
+    # We check if the bib is contained in a person box.
     bib_center_x = (bib_box[0] + bib_box[2]) / 2
     bib_center_y = (bib_box[1] + bib_box[3]) / 2
 
@@ -25,23 +26,8 @@ def check_bib_in_person(bib_box, person_boxes):
     return False, None
 
 
-def treat_bib_result(args):
-    bib_box, bib_reader, frame, person_result = args
-    res = check_bib_in_person(bib_box, person_result.boxes)
-    if res[0]:
-        person_id = int(res[1])
-        if person_id is None:
-            return None
-        cropped_bib = frame[bib_box[1].int() : bib_box[3].int(), bib_box[0].int() : bib_box[2].int()].copy()
-
-        res = bib_reader.read_frame(cropped_bib)
-        if res is None:
-            return None
-        return (res[0], res[1], person_id)
-    return None
-
-
 def box_to_points(box):
+    # Convert a box to two points for easier drawing with opencv
     arr = box.numpy().astype(np.int32)
     return arr[:2], arr[2:]
 
@@ -152,8 +138,10 @@ class Pipeline:
             # If no person are detected, we can't do anyhting...
             return frames
 
+        # Else, we treat the depth result
         arrived = self.line.treat_depth(depth, person_result, frames["annoted"], self.annotate)
 
+        # For each person, we check if they have passed the arrival line or not
         for p_id in person_result.boxes.id:
             p_id = int(p_id)
             if p_id not in self.persons.keys():
@@ -167,21 +155,27 @@ class Pipeline:
             frames["person"] = self.keep_only_boxes(frame, person_result.boxes.xyxy)
 
         if bib_result is not None:
+            # If we found some bibs
             if self.detail_annotate:
                 frames["bib"] = self.keep_only_boxes(frame, bib_result.boxes.xyxy)
             for bib_box in bib_result.boxes.xyxy:
+                # For each bib box, we check if it is contained in a person box
+                # If so, we link the bib detection to the person box id
                 res = check_bib_in_person(bib_box, person_result.boxes)
                 if res[0]:
                     person_id = int(res[1])
                     if person_id is None:
                         continue
                     cropped_bib = frame[bib_box[1].int() : bib_box[3].int(), bib_box[0].int() : bib_box[2].int()].copy()
-
+                    # We try to read the bib number
                     res = self.bib_reader.read_frame(cropped_bib)
                     if res is not None:
+                        # If we have a result from the OCR
+                        # We assign it to the person id
                         bib, confidence = res
                         self.persons[person_id].detected_bib(bib, confidence)
         if self.annotate:
+            # This is only to generated debug frames
             for box, id in zip(person_result.boxes.xyxy, person_result.boxes.id, strict=False):
                 id = int(id)
                 curr_pers = self.persons[id]

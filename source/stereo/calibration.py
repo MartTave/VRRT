@@ -10,6 +10,8 @@ from typing_extensions import Sequence
 
 
 def get_common_corners(corners1, ids1, corners2, ids2):
+    # This function filter both corners array to keep elements presents only in boths
+
     assert ids1 is not None and ids2 is not None and len(ids1) != 0 and len(ids2) != 0
 
     ids1_flat = ids1.flatten()
@@ -34,6 +36,7 @@ def get_common_corners(corners1, ids1, corners2, ids2):
 
 
 def get_points(img, board, charuco_detector):
+    # This function get the charuco board points from the picture
     charuco_corners, charuco_ids, markers_corners, markers_ids = charuco_detector.detectBoard(img)
 
     charuco_corners = cast(Sequence[MatLike], np.squeeze(charuco_corners))
@@ -71,6 +74,7 @@ def get_charuco_detector():
 
 
 def calibrate_from_pics(path, save_results=True):
+    # Load all images
     left_pics = list(sorted(glob.glob(os.path.join(path, "left*.png"))))
     right_pics = list(sorted(glob.glob(os.path.join(path, "right*.png"))))
     assert len(left_pics) == len(right_pics)
@@ -87,6 +91,7 @@ def calibrate_from_pics(path, save_results=True):
     img_size = None
 
     for i, (left, right) in enumerate(zip(left_pics, right_pics)):
+        # For each pair of images
         left_img = cv2.imread(left, cv2.IMREAD_GRAYSCALE)
         right_img = cv2.imread(right, cv2.IMREAD_GRAYSCALE)
 
@@ -100,12 +105,14 @@ def calibrate_from_pics(path, save_results=True):
             print(f"Image size is : {img_size[0]}x{img_size[1]}")
         assert np.array_equal(img_size, left_img.shape[:2]) and np.array_equal(img_size, right_img.shape[:2])
 
+        # We find all the points possible for each distinct images
         left_corners, left_ids, left_obj, left_img = get_points(left_img, board, charuco_detector)
         right_corners, right_ids, right_obj, right_img = get_points(right_img, board, charuco_detector)
 
         if left_corners is None or right_corners is None:
             continue
 
+        # If we have enough points, we can add them to camera calibration points array
         if len(left_corners) > 4:
             all_obj_points["left"].append(left_obj)
             all_img_points["left"].append(left_img)
@@ -116,16 +123,19 @@ def calibrate_from_pics(path, save_results=True):
         # The ids list are sorted !
         common_corners_left, common_corners_right, common_ids = get_common_corners(left_corners, left_ids, right_corners, right_ids)
 
+        # As we should keep only the points presents in both array, they should be the same length by now
         assert len(common_corners_right) == len(common_corners_left) and len(common_corners_right) == len(common_ids)
 
         if len(common_corners_right) < 6:
             print("Removed pic, not enough points for stereo calibration")
             continue
 
+        # We match the ids of the charuco corners with the object points
         left_obj_points, left_img_points = board.matchImagePoints(cast(Sequence[MatLike], common_corners_left), common_ids)
 
         right_obj_points, right_img_points = board.matchImagePoints(cast(Sequence[MatLike], common_corners_right), common_ids)
 
+        # As we gave the same ids to the function. The objects points returned should be the same
         assert np.array_equal(left_obj_points, right_obj_points)
 
         stereo_points["obj_points"].append(left_obj_points)

@@ -132,20 +132,15 @@ class WriterThread(threading.Thread):
         self.running = False
 
 
-# Example usage
 if __name__ == "__main__":
-    # Create camera threads with desired settings
-    # Parameters: camera_id, focus_value (0-255 or None for auto), exposure_value
     cam1 = CameraThread(2, focus_value=50, exposure_value=100)
     cam2 = CameraThread(0, focus_value=60, exposure_value=150)
     writer = WriterThread(cam1, cam2)
     try:
-        # Start cameras
         writer.start()
         cam1.start()
         cam2.start()
 
-        # Keep main thread alive
         while True:
             time.sleep(0.1)
 

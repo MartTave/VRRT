@@ -26,6 +26,7 @@ class BibReader(ABC):
         pass
 
 
+# This is a wrapper for the OCRs reader (as of now, PaddlePaddleOCR and easyOCR)
 class OCRReader(BibReader):
     conf_treshold: float
     accepted_chars: str

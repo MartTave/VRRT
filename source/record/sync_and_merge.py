@@ -27,7 +27,7 @@ def merge_monocular_video(video_folder):
     left_text = list(sorted(glob.glob(os.path.join(video_folder, "video_*.txt"))))
     left_videos = list(sorted(glob.glob(os.path.join(video_folder, "video_*.mp4"))))
     global_frame_index = 0
-    with open(os.path.join(dest_folder, "merged_2.txt", "w")) as outfile:
+    with open(os.path.join(dest_folder, "merged.txt", "w")) as outfile:
         for l_txt, l_vid in zip(left_text, left_videos, strict=False):
             cap = cv2.VideoCapture(l_vid)
             print(f"Doing file : {l_vid}")
@@ -91,6 +91,8 @@ def create_synced_timestamps():
                 global right_index
 
                 def sync_timestamp():
+                    # This is here to find the right indexes for both camera side
+                    # It allows to sync the indexes to ensure the least possibe time diff
                     global left_index
                     global right_index
                     left_timestamp = float(left_lines[left_index].split(";")[1])
@@ -114,6 +116,8 @@ def create_synced_timestamps():
                         break
                     if right_index >= len(right_lines):
                         break
+                    # If the sync timestamp function returns True, if has successfully synced timestamps
+                    # Else we need to loop one more time
                     if sync_timestamp():
                         left_line = left_lines[left_index].replace("\n", "").split(";")
                         right_line = right_lines[right_index].replace("\n", "").split(";")
@@ -146,6 +150,7 @@ def merge_videos():
     map_right_x, map_right_y = (calib_file["map_right_x"], calib_file["map_right_y"])
 
     def get_cap(filename, side) -> cv2.VideoCapture:
+        # This function gets the right capture for the right cameras and filename
         global captures
         assert side == "l" or side == "r"
         if captures[side][0] != filename:
@@ -157,6 +162,7 @@ def merge_videos():
         return captures[side][1]
 
     def get_frame(filename, side, frame_n):
+        # This function set the capture position to the right frame, in order to allow to skip frame for better sync
         cap = get_cap(filename, side)
         cap.set(cv2.CAP_PROP_POS_FRAMES, frame_n)
         ret, frame = cap.read()
