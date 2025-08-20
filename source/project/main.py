@@ -6,13 +6,14 @@ import os
 import cv2
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
+
 from classes.bib_detector import PreTrainedModel
 from classes.bib_reader import OCRReader, OCRType
 from classes.depth import ArrivalLine
 from classes.person_detector import YOLOv11
 from classes.pipeline import Pipeline
 from classes.tools import crop, get_colored_logger
-from tqdm import tqdm
 
 # Those are the parameters to set for the script to work
 START_FRAME = 0  # The frame at which to start
@@ -35,7 +36,9 @@ def set_first_clip():
     # use this function to set the global parameters for the video between 10min and 01h05
     global START_FRAME, END_FRAME, PARAMETER_FILE
     START_FRAME = 10 * 60 * 30  # 00:10:00
+    START_FRAME = 34 * 60 * 30 + 20 * 30
     END_FRAME = 75 * 60 * 30  # 01:05:00
+    END_FRAME = START_FRAME + 7 * 30
     PARAMETER_FILE = "parameters/parameters_first_hour.json"
     pass
 
@@ -118,7 +121,7 @@ def sequential_pipe():
             logger.info("End of recording reached")
             break
         frame = crop(frame, parameters["crop"])
-        frames = pipeline.new_frame(frame, i, parralel=True)
+        frames = pipeline.new_frame(frame, i, parralel=False)
         if ANNOTATE:
             writer.write(frames["annoted"])
         if DETAIL_ANNOTATE:

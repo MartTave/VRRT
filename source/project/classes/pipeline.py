@@ -2,6 +2,7 @@ import concurrent.futures
 
 import cv2
 import numpy as np
+
 from classes.bib_detector import BibDetector
 from classes.bib_reader import BibReader
 from classes.depth import ArrivalLine
@@ -192,30 +193,30 @@ class Pipeline:
                 text_2 = f"Bib {bib_text}"
                 # Draw box around person
                 person_points = box_to_points(box)
-                cv2.rectangle(frames["annoted"], person_points[0], person_points[1], color=color)
+                # cv2.rectangle(frames["annoted"], person_points[0], person_points[1], color=color)
 
                 # Draw text for person info
-                cv2.putText(
-                    frames["annoted"],
-                    text_1,
-                    (person_points[0][0], person_points[0][1] - 14),
-                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                    fontScale=0.5,
-                    color=(255, 0, 255),
-                )
-                cv2.putText(
-                    frames["annoted"], text_2, person_points[0], fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=bib_color, thickness=1
-                )
+                # cv2.putText(
+                #     frames["annoted"],
+                #     text_1,
+                #     (person_points[0][0], person_points[0][1] - 14),
+                #     fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                #     fontScale=0.5,
+                #     color=(255, 0, 255),
+                # )
+                # cv2.putText(
+                #     frames["annoted"], text_2, person_points[0], fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=bib_color, thickness=1
+                # )
             if bib_result is not None:
                 for box in bib_result.boxes.xyxy.cpu():
                     points = box_to_points(box)
-                    cv2.rectangle(frames["annoted"], points[0], points[1], color=(255, 0, 255))
-            cv2.line(frames["annoted"], self.line.line_points[0], self.line.line_points[1], (255, 255, 0), 3)
+                    # cv2.rectangle(frames["annoted"], points[0], points[1], color=(255, 0, 255), thickness=4)
+            # cv2.line(frames["annoted"], self.line.line_points[0], self.line.line_points[1], (255, 255, 0), 3)
             if self.detail_annotate:
                 new_frame = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
                 new_frame = new_frame.astype(np.uint8)
                 new_frame = cv2.applyColorMap(new_frame, cv2.COLORMAP_JET)
-                new_frame = cv2.line(new_frame, self.line.line_points[0], self.line.line_points[1], (255, 0, 255), 3)
+                # new_frame = cv2.line(new_frame, self.line.line_points[0], self.line.line_points[1], (255, 0, 255), 3)
                 frames["depth"] = new_frame
         if frame_index % 10 == 0:
             self.remove_useless_persons(frame_index)

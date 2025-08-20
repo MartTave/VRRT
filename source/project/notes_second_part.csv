@@ -1,0 +1,286 @@
+Bib,bib_visible,doable,passed_line
+10,False,False,True
+69,True,True,True
+1125,False,False,True
+1128,False,False,True
+1058,False,False,True
+1067,False,False,True
+1131,False,False,True
+1094,True,True,True
+1145,False,False,True
+1175,True,False,True
+1039,False,False,True
+1040,False,False,True
+1187,True,True,True
+1184,False,False,True
+1215,False,False,True
+1199,False,False,True
+1177,False,False,True
+1172,True,True,True
+94,True,True,True
+1216,True,True,True
+1166,False,False,True
+1070,True,False,True
+1123,False,False,True
+1025,True,False,True
+1122,False,False,True
+1029,True,True,True
+43,True,False,True
+1181,True,True,True
+17,True,True,True
+3,False,False,True
+1222,True,True,True
+1109,True,False,True
+142,False,False,True
+93,True,True,True
+134,True,True,False
+36,True,False,True
+112,True,True,False
+1113,True,False,True
+1189,False,False,True
+138,True,True,True
+1001,False,False,True
+119,True,False,True
+1028,False,False,True
+11,True,True,True
+1211,False,False,True
+1075,False,False,True
+13,False,False,True
+
+
+bib_status = {
+"10": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},"69": {
+"bib_visible": True,
+"doable": True,
+"passed_line": True
+},
+"1125": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"1128": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"1058": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"1067": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"1131": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"1094": {
+"bib_visible": True,
+"doable": True,
+"passed_line": True
+},
+"1145": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"1175": {
+"bib_visible": True,
+"doable": False,
+"passed_line": True
+},
+"1039": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"1040": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"1187": {
+"bib_visible": True,
+"doable": True,
+"passed_line": True
+},
+"1184": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"1215": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"1199": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"1177": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"1172": {
+"bib_visible": True,
+"doable": True,
+"passed_line": True
+},
+"94": {
+"bib_visible": True,
+"doable": True,
+"passed_line": True
+},
+"1216": {
+"bib_visible": True,
+"doable": True,
+"passed_line": True
+},
+"1166": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"1070": {
+"bib_visible": True,
+"doable": False,
+"passed_line": True
+},
+"1123": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"1025": {
+"bib_visible": True,
+"doable": False,
+"passed_line": True
+},
+"1122": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"1029": {
+"bib_visible": True,
+"doable": True,
+"passed_line": True
+},
+"43": {
+"bib_visible": True,
+"doable": False,
+"passed_line": True
+},
+"1181": {
+"bib_visible": True,
+"doable": True,
+"passed_line": True
+},
+"17": {
+"bib_visible": True,
+"doable": True,
+"passed_line": True
+},
+"3": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"1222": {
+"bib_visible": True,
+"doable": True,
+"passed_line": True
+},
+"1109": {
+"bib_visible": True,
+"doable": False,
+"passed_line": True
+},
+"142": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"93": {
+"bib_visible": True,
+"doable": True,
+"passed_line": True
+},
+"134": {
+"bib_visible": True,
+"doable": True,
+"passed_line": False
+},
+"36": {
+"bib_visible": True,
+"doable": False,
+"passed_line": True
+},
+"112": {
+"bib_visible": True,
+"doable": True,
+"passed_line": False
+},
+"1113": {
+"bib_visible": True,
+"doable": False,
+"passed_line": True
+},
+"1189": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"138": {
+"bib_visible": True,
+"doable": True,
+"passed_line": True
+},
+"1001": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"119": {
+"bib_visible": True,
+"doable": False,
+"passed_line": True
+},
+"1028": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"11": {
+"bib_visible": True,
+"doable": True,
+"passed_line": True
+},
+"1211": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"1075": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+},
+"13": {
+"bib_visible": False,
+"doable": False,
+"passed_line": True
+}
+}

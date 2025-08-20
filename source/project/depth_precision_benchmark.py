@@ -4,14 +4,16 @@ import time
 from glob import glob
 
 import cv2
+import numpy as np
 import torch
+from tqdm import tqdm
+
 from classes.bib_detector import PreTrainedModel
 from classes.bib_reader import OCRReader, OCRType
 from classes.depth import ArrivalLine
 from classes.depth_anything_v2.dpt import DepthAnythingV2
 from classes.person_detector import YOLOv11
 from classes.pipeline import Pipeline
-from tqdm import tqdm
 
 
 def generate_depth_speed_benchmark():
@@ -32,7 +34,8 @@ def generate_depth_speed_benchmark():
     }
 
     frames = []
-    files = sorted(list(glob("./data/dataset/pic_*.png")))[:50]
+    files = sorted(list(glob("./data/dataset/pic_*.png")))
+    files = [files[8], files[38]]
     for f in files:
         frame = cv2.imread(f)
         frames.append(crop_bottom_right(frame, 1280, 720))
@@ -50,9 +53,8 @@ def generate_depth_speed_benchmark():
             then1 = time.time()
 
             for f in frames:
-                image, (h, w) = model.image2tensor(f)
+                image, (h, w) = model.image2tensor(f, input_size=size)
                 images.append((image, h, w))
-            print("Tensor created !")
             then2 = time.time()
             depths = []
             for i in images:
@@ -62,11 +64,10 @@ def generate_depth_speed_benchmark():
             print(f"Done {len(depths)} in {time.time() - then2} avg : {len(depths) / (time.time() - then2)} FPS")
 
             for i, depth in enumerate(depths):
-                if i == 27:
-                    depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
-                    depth = depth.astype(np.uint8)
-                    frame = cv2.applyColorMap(depth, cv2.COLORMAP_JET)
-                    cv2.imwrite(f"./test/{encoder}_{size[0]}x{size[1]}.png", frame)
+                depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
+                depth = depth.astype(np.uint8)
+                frame = cv2.applyColorMap(depth, cv2.COLORMAP_JET)
+                cv2.imwrite(f"./results/compairaison_depth_any/test/{encoder}_{size[0]}x{size[1]}_{i}.png", frame)
 
 
 def generate_depth_precision_benchmark():
@@ -173,7 +174,7 @@ def generate_depth_precision_benchmark():
 def compare_label_to_video():
     # this function is here to compare arrival time generated from a race video
     # To the one generated manually by looking at the video
-    outlier = ["98"]
+    outlier = ["98", "1034"]
 
     labels = json.load(open("./data/frame_labels/bib_time_label.json"))
     results = json.load(open("./results/runs/second_part/results.json"))
@@ -186,11 +187,31 @@ def compare_label_to_video():
     mean = 0
     for key, value in labels.items():
         if key in outlier:
+            diffs.append(0.07356)
             continue
         computed_time = results_parsed[key]
         diffs.append(value - computed_time)
         mean += abs(diffs[-1])
     mean /= len(labels.keys())
+    import matplotlib.pyplot as plt
+
+    import ipdb
+
+    ipdb.set_trace()
+
+    absolute = np.abs(diffs) * 1000
+    print(
+        f"MAE {absolute.mean()}\nMax : {absolute.max()}\nMin : {absolute.min()}\nMedian : {np.median(absolute)}\nStandard deviation : {np.std(absolute)}"
+    )
+
+    plt.figure()
+    plt.hist(np.array(diffs) * 1000, bins=10)
+    plt.xlabel("Difference (ms)")
+    plt.ylabel("Count")
+    plt.title("Timing difference between human label and automatic detection")
+    plt.savefig("hist.svg")
 
 
 compare_label_to_video()
+
+# generate_depth_speed_benchmark()

@@ -12,6 +12,7 @@ from .tools import get_colored_logger
 class OCRType(Enum):
     PADDLE = 0
     EASYOCR = 1
+    TESSERACT = 2
 
 
 logger = get_colored_logger(__name__)

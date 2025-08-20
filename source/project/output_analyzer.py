@@ -4,13 +4,97 @@ import os
 
 import cv2
 import pandas as pd
-from classes.tools import get_colored_logger
 from dateutil.parser import parse
+
+from classes.tools import get_colored_logger
 
 logger = get_colored_logger(__name__)
 
 
 frames_label = {}
+
+bib_status = {
+    "2083": {"bib_visible": True, "doable": True, "passed_line": True},
+    "2173": {"bib_visible": False, "doable": False, "passed_line": True},
+    "2172": {"bib_visible": False, "doable": False, "passed_line": True},
+    "2065": {"bib_visible": False, "doable": False, "passed_line": True},
+    "2018": {"bib_visible": True, "doable": False, "passed_line": True},
+    "2166": {"bib_visible": True, "doable": False, "passed_line": True},
+    "2055": {"bib_visible": False, "doable": False, "passed_line": True},
+    "2007": {"bib_visible": True, "doable": False, "passed_line": True},
+    "2177": {"bib_visible": True, "doable": True, "passed_line": True},
+    "2170": {"bib_visible": True, "doable": True, "passed_line": True},
+    "2139": {"bib_visible": True, "doable": True, "passed_line": True},
+    "2163": {"bib_visible": True, "doable": False, "passed_line": True},
+    "2077": {"bib_visible": True, "doable": False, "passed_line": True},
+    "2046": {"bib_visible": True, "doable": True, "passed_line": True},
+    "2160": {"bib_visible": True, "doable": True, "passed_line": True},
+    "2075": {"bib_visible": True, "doable": True, "passed_line": True},
+    "2178": {"bib_visible": True, "doable": False, "passed_line": True},
+    "2197": {"bib_visible": True, "doable": True, "passed_line": False},
+    "2159": {"bib_visible": False, "doable": False, "passed_line": True},
+    "2048": {"bib_visible": True, "doable": False, "passed_line": True},
+    "2121": {"bib_visible": True, "doable": True, "passed_line": True},
+    "2025": {"bib_visible": True, "doable": False, "passed_line": True},
+    "2028": {"bib_visible": True, "doable": True, "passed_line": True},
+    "2029": {"bib_visible": True, "doable": True, "passed_line": True},
+    "2041": {"bib_visible": True, "doable": True, "passed_line": True},
+    "2137": {"bib_visible": True, "doable": True, "passed_line": True},
+    "2100": {"bib_visible": True, "doable": True, "passed_line": True},
+    "2208": {"bib_visible": True, "doable": True, "passed_line": True},
+    "2050": {"bib_visible": True, "doable": True, "passed_line": True},
+    "2073": {"bib_visible": False, "doable": False, "passed_line": True},
+    "1229": {"bib_visible": False, "doable": False, "passed_line": True},
+    "2016": {"bib_visible": True, "doable": True, "passed_line": True},
+    "10": {"bib_visible": False, "doable": False, "passed_line": True},
+    "69": {"bib_visible": True, "doable": True, "passed_line": True},
+    "1125": {"bib_visible": False, "doable": False, "passed_line": True},
+    "1128": {"bib_visible": False, "doable": False, "passed_line": True},
+    "1058": {"bib_visible": False, "doable": False, "passed_line": True},
+    "1067": {"bib_visible": False, "doable": False, "passed_line": True},
+    "1131": {"bib_visible": False, "doable": False, "passed_line": True},
+    "1094": {"bib_visible": True, "doable": True, "passed_line": True},
+    "1145": {"bib_visible": False, "doable": False, "passed_line": True},
+    "1175": {"bib_visible": True, "doable": False, "passed_line": True},
+    "1039": {"bib_visible": False, "doable": False, "passed_line": True},
+    "1040": {"bib_visible": False, "doable": False, "passed_line": True},
+    "1187": {"bib_visible": True, "doable": True, "passed_line": True},
+    "1184": {"bib_visible": False, "doable": False, "passed_line": True},
+    "1215": {"bib_visible": False, "doable": False, "passed_line": True},
+    "1199": {"bib_visible": False, "doable": False, "passed_line": True},
+    "1177": {"bib_visible": False, "doable": False, "passed_line": True},
+    "1172": {"bib_visible": True, "doable": True, "passed_line": True},
+    "94": {"bib_visible": True, "doable": True, "passed_line": True},
+    "1216": {"bib_visible": True, "doable": True, "passed_line": True},
+    "1166": {"bib_visible": False, "doable": False, "passed_line": True},
+    "1070": {"bib_visible": True, "doable": False, "passed_line": True},
+    "1123": {"bib_visible": False, "doable": False, "passed_line": True},
+    "1025": {"bib_visible": True, "doable": False, "passed_line": True},
+    "1122": {"bib_visible": False, "doable": False, "passed_line": True},
+    "1029": {"bib_visible": True, "doable": True, "passed_line": True},
+    "43": {"bib_visible": True, "doable": False, "passed_line": True},
+    "1181": {"bib_visible": True, "doable": True, "passed_line": True},
+    "17": {"bib_visible": True, "doable": True, "passed_line": True},
+    "3": {"bib_visible": False, "doable": False, "passed_line": True},
+    "1222": {"bib_visible": True, "doable": True, "passed_line": True},
+    "1109": {"bib_visible": True, "doable": False, "passed_line": True},
+    "142": {"bib_visible": False, "doable": False, "passed_line": True},
+    "93": {"bib_visible": True, "doable": True, "passed_line": True},
+    "134": {"bib_visible": True, "doable": True, "passed_line": False},
+    "36": {"bib_visible": True, "doable": False, "passed_line": True},
+    "112": {"bib_visible": True, "doable": True, "passed_line": True},
+    "1113": {"bib_visible": True, "doable": False, "passed_line": True},
+    "1189": {"bib_visible": False, "doable": False, "passed_line": True},
+    "138": {"bib_visible": True, "doable": True, "passed_line": True},
+    "1001": {"bib_visible": False, "doable": False, "passed_line": True},
+    "119": {"bib_visible": True, "doable": False, "passed_line": True},
+    "1028": {"bib_visible": False, "doable": False, "passed_line": True},
+    "11": {"bib_visible": True, "doable": True, "passed_line": True},
+    "1211": {"bib_visible": False, "doable": False, "passed_line": True},
+    "1075": {"bib_visible": False, "doable": False, "passed_line": True},
+    "13": {"bib_visible": False, "doable": False, "passed_line": True},
+}
+
 
 unreadable = [
     "2083",
@@ -76,6 +160,7 @@ class OutputAnalyzer:
         debug_video_path: str,
         frame_to_timestamp_filepath: str,
         remove_unreadable=True,
+        remove_undoable=False,
     ):
         self.computed_results = self.load_computed_results(computed_results_filepath)
         self.video_cap = cv2.VideoCapture(debug_video_path)
@@ -89,14 +174,19 @@ class OutputAnalyzer:
         self.compute_timestamp_end = self.frame_arr[self.frame_end]
         self.compute_timestamp_start = self.frame_arr[self.frame_start]
         self.remove_unreadable = remove_unreadable
-        if not remove_unreadable:
+        self.remove_undoable = remove_undoable
+        if not remove_unreadable and not remove_undoable:
             self.official_results = self.load_official_results(official_result_filepath)
         else:
             self.official_results = {}
             temp = self.load_official_results(official_result_filepath)
             for key in temp:
-                if key not in unreadable:
+                if key not in bib_status.keys():
                     self.official_results[key] = temp[key]
+                else:
+                    if self.remove_unreadable == False or bib_status[key]["bib_visible"] == True:
+                        if self.remove_undoable == False or bib_status[key]["doable"] == True:
+                            self.official_results[key] = temp[key]
 
     def load_official_results(self, filepath: str):
         frame = pd.read_csv(filepath, delimiter=";", dtype={"Dossard": "string", "time": "float"})
@@ -135,6 +225,7 @@ class OutputAnalyzer:
         self.video_cap.set(cv2.CAP_PROP_POS_FRAMES, frame_start)
         i = frame_start
         pause = False
+        startIndex = -1
         while i < frame_end:
             self.video_cap.set(cv2.CAP_PROP_POS_FRAMES, i)
             ret, frame = self.video_cap.read()
@@ -156,6 +247,29 @@ class OutputAnalyzer:
                 print(f"Timestamp saved for bib : {bib}. Frame : {i + self.frame_start}")
                 frames_label[bib] = self.frame_arr[i + self.frame_start]
                 pass
+            elif key == ord("c"):
+                cv2.imwrite(f"./debug/report/debug_{bib}.png", frame)
+            elif key == ord("g"):
+                print("Starting gif save !")
+                startIndex = i
+            elif key == ord("i") and startIndex != -1:
+                print("Saving mp4 !")
+                points = [(260, 113), (570, 613)]
+                print(f"x: {points[1][0] - points[0][0]} - y:{points[1][1] - points[0][1]}")
+                frames = []
+                temp_writer = cv2.VideoWriter(
+                    f"debug_{bib}.mp4", cv2.VideoWriter_fourcc(*"mp4v"), 15, (points[1][0] - points[0][0], points[1][1] - points[0][1])
+                )
+                for j in range(startIndex, i):
+                    self.video_cap.set(cv2.CAP_PROP_POS_FRAMES, j)
+                    ret, frame = self.video_cap.read()
+                    if not ret:
+                        break
+                    else:
+                        frame = frame[points[0][1] : points[1][1], points[0][0] : points[1][0]]
+                        temp_writer.write(frame)
+                temp_writer.release()
+                startIndex = -1
             elif not pause:
                 i += 1
 
@@ -245,12 +359,12 @@ class OutputAnalyzer:
         print(f"Total bibs to detect : {total}")
         print(f"Correct : {correct} ==> {correct / total:.2f}")
         print(f"Wrong time : {wrong_time} ==> {wrong_time / total:.2f}")
-        print(f"Did not pass line : {res['no_line']} ==> {wrong_time / total:.2f}")
+        print(f"Did not pass line : {res['no_line']} ==> {res['no_line'] / total:.2f}")
         print(f"Bib missed : {missed} ==> {missed / total:.2f}")
 
 
 def compare_results_details(res1, res2):
-    for key in ["founds", "wrong_detection", "not_found"]:
+    for key in ["not_found"]:
         curr_res1 = [el[0] for el in res1["detail"][key]]
         curr_res2 = [el[0] for el in res2["detail"][key]]
         res1_bonus = []
@@ -268,14 +382,15 @@ def compare_results_details(res1, res2):
 
 # This folders need to contain the video if you want to do video analysis
 # But the results.json is MANDATORY
-run_folder = "./results/runs/second_part"
 
+run_folder = "./results/runs/second_part_complete"
 parser = OutputAnalyzer(
     official_result_filepath="./data/race_results/official_base.csv",
     computed_results_filepath=os.path.join(run_folder, "results.json"),
     debug_video_path=os.path.join(run_folder, "out.mp4"),
     frame_to_timestamp_filepath="./data/recorded/merged/right_merged.csv",
-    remove_unreadable=True,
+    remove_unreadable=False,
+    remove_undoable=False,
 )
 
 parser.apply_filtering()
@@ -284,15 +399,18 @@ res = parser.get_statistics()
 
 
 def analyze_details(res, cat):
-    for i in res["detail"][cat][20:50]:
+    for i in res["detail"][cat]:
+        if i[1] not in ["1072"]:
+            continue
         print(f"Debugging : {i[1:]}")
         if isinstance(i[0], float):
             parser.show_video_clip(timestamp=i[0], bib=i[1])
         else:
             print("Saw him here : ")
-            parser.show_video_clip(timestamp=i[0][0])
+            parser.show_video_clip(timestamp=i[0][0], bib=i[1] + "found")
             print("Was here")
-            parser.show_video_clip(timestamp=i[0][1])
+            print(f"Diff is : {i[0][0] - i[0][1]}")
+            parser.show_video_clip(timestamp=i[0][1], bib=i[1] + "real")
 
 
 def wrong_detection_analysis(res):
@@ -319,8 +437,9 @@ parser.get_metrics(res)
 
 # wrong_dete&ction_analysis(res2)
 try:
-    analyze_details(res, "correct")
+    # analyze_details(res, "correct")
+    pass
 except Exception:
     pass
 
-# not_found_analysis(res2)
+analyze_details(res, "correct")

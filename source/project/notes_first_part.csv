@@ -1,0 +1,197 @@
+Bib,bib_visible,doable,passed_line
+2083,True,True,True
+2173,False,False,True
+2172,False,False,True
+2065,False,False,True
+2018,True,False,True
+2166,True,False,True
+2055,False,False,True
+2007,True,False,True
+2177,True,True,True
+2170,True,True,True
+2139,True,True,True
+2163,True,False,True
+2077,True,False,True
+2046,True,True,True
+2173,True,True,True
+2160,True,True,True
+2075,True,True,True
+2178,True,False,True
+2197,True,True,False
+2159,False,False,True
+2048,True,False,True
+2121,True,True,True
+2025,True,False,True
+2028,True,True,True
+2029,True,True,True
+2041,True,True,True
+2137,True,True,True
+2100,True,True,True
+2208,True,True,True
+2050,True,True,True
+2073,False,False,True
+1229,False,False,True
+2016,True,True,True
+
+bib_status = {
+  "2083": {
+    "bib_visible": True,
+    "doable": True,
+    "passed_line": True
+  } ,
+      "2173": {
+        "bib_visible": False,
+        "doable": False,
+        "passed_line": True
+      },
+      "2172": {
+        "bib_visible": False,
+        "doable": False,
+        "passed_line": True
+      },
+      "2065": {
+        "bib_visible": False,
+        "doable": False,
+        "passed_line": True
+      },
+      "2018": {
+        "bib_visible": True,
+        "doable": False,
+        "passed_line": True
+      },
+      "2166": {
+        "bib_visible": True,
+        "doable": False,
+        "passed_line": True
+      },
+      "2055": {
+        "bib_visible": False,
+        "doable": False,
+        "passed_line": True
+      },
+      "2007": {
+        "bib_visible": True,
+        "doable": False,
+        "passed_line": True
+      },
+      "2177": {
+        "bib_visible": True,
+        "doable": True,
+        "passed_line": True
+      },
+      "2170": {
+        "bib_visible": True,
+        "doable": True,
+        "passed_line": True
+      },
+      "2139": {
+        "bib_visible": True,
+        "doable": True,
+        "passed_line": True
+      },
+      "2163": {
+        "bib_visible": True,
+        "doable": False,
+        "passed_line": True
+      },
+      "2077": {
+        "bib_visible": True,
+        "doable": False,
+        "passed_line": True
+      },
+      "2046": {
+        "bib_visible": True,
+        "doable": True,
+        "passed_line": True
+      },
+      "2160": {
+        "bib_visible": True,
+        "doable": True,
+        "passed_line": True
+      },
+      "2075": {
+        "bib_visible": True,
+        "doable": True,
+        "passed_line": True
+      },
+      "2178": {
+        "bib_visible": True,
+        "doable": False,
+        "passed_line": True
+      },
+      "2197": {
+        "bib_visible": True,
+        "doable": True,
+        "passed_line": False
+      },
+      "2159": {
+        "bib_visible": False,
+        "doable": False,
+        "passed_line": True
+      },
+      "2048": {
+        "bib_visible": True,
+        "doable": False,
+        "passed_line": True
+      },
+      "2121": {
+        "bib_visible": True,
+        "doable": True,
+        "passed_line": True
+      },
+      "2025": {
+        "bib_visible": True,
+        "doable": False,
+        "passed_line": True
+      },
+      "2028": {
+        "bib_visible": True,
+        "doable": True,
+        "passed_line": True
+      },
+      "2029": {
+        "bib_visible": True,
+        "doable": True,
+        "passed_line": True
+      },
+      "2041": {
+        "bib_visible": True,
+        "doable": True,
+        "passed_line": True
+      },
+      "2137": {
+        "bib_visible": True,
+        "doable": True,
+        "passed_line": True
+      },
+      "2100": {
+        "bib_visible": True,
+        "doable": True,
+        "passed_line": True
+      },
+      "2208": {
+        "bib_visible": True,
+        "doable": True,
+        "passed_line": True
+      },
+      "2050": {
+        "bib_visible": True,
+        "doable": True,
+        "passed_line": True
+      },
+      "2073": {
+        "bib_visible": False,
+        "doable": False,
+        "passed_line": True
+      },
+      "1229": {
+        "bib_visible": False,
+        "doable": False,
+        "passed_line": True
+      },
+      "2016": {
+        "bib_visible": True,
+        "doable": True,
+        "passed_line": True
+      }
+}
