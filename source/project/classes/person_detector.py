@@ -45,7 +45,7 @@ class YOLOv11(PersonDetector):
             return None
         result = results[0]
 
-        if result.boxes is None:
+        if result.boxes is None or result.boxes.id is None:
             return None
 
         # Visualize the result on the frame
