@@ -1,4 +1,5 @@
 import concurrent.futures
+from collections import defaultdict
 
 import cv2
 import numpy as np
@@ -9,6 +10,9 @@ from classes.person_detector import PersonDetector
 from classes.tools import get_colored_logger
 
 logger = get_colored_logger(__name__)
+
+
+track_history = defaultdict(lambda: [])
 
 
 def check_bib_in_person(bib_box, person_boxes):
@@ -188,6 +192,15 @@ class Pipeline:
                     bib_text = f"'{curr_pers.best_bib.bib_text}'"
                     bib_color = (0, 255, 0)
 
+                x_center = box[0] + (box[2] - box[0]) / 2
+                track = track_history[id]
+                track.append((float(x_center), float(box[3])))  # x, y center point
+                if len(track) > 30:  # retain 30 tracks for 30 frames
+                    track.pop(0)
+
+                points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
+                cv2.polylines(frames["annoted"], [points], isClosed=False, color=(255, 255, 0), thickness=3)
+
                 text_1 = f"Id : {id}"
                 text_2 = f"Bib {bib_text}"
                 # Draw box around person
@@ -236,7 +249,8 @@ class Pipeline:
         else:
             person_result = self.person_detector.detect_persons(frame)
             bib_result = self.bib_detector.detect_bib(frame)
-            depth = self.line.model.infer_image(frame)
+            # depth = self.line.model.infer_image(frame)
+            depth = None
         return self.treat_new_frame_result(frame, frame_index, person_result, bib_result, depth)
 
     def new_frames(self, frames, frames_indexes):
