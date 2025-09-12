@@ -142,8 +142,16 @@ class Pipeline:
             # If no person are detected, we can't do anyhting...
             return frames
 
+        if self.detail_annotate:
+            new_frame = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
+            new_frame = new_frame.astype(np.uint8)
+            new_frame = cv2.applyColorMap(new_frame, cv2.COLORMAP_JET)
+            # new_frame = cv2.line(new_frame, self.line.line_points[0], self.line.line_points[1], (255, 0, 255), 3)
+            width = frame.shape[1]
+            frames["annoted"][:, width//2:] = new_frame[:, width//2:]
+
         # Else, we treat the depth result
-        # arrived = self.line.treat_depth(depth, person_result, frames["annoted"], self.annotate)
+        # self.line.treat_depth(depth, person_result, frames["annoted"], self.annotate)
         arrived = []
         # For each person, we check if they have passed the arrival line or not
         for p_id in person_result.boxes.id:
@@ -224,12 +232,7 @@ class Pipeline:
                     points = box_to_points(box)
                     cv2.rectangle(frames["annoted"], points[0], points[1], color=(255, 0, 255), thickness=4)
             # cv2.line(frames["annoted"], self.line.line_points[0], self.line.line_points[1], (255, 255, 0), 3)
-            if self.detail_annotate:
-                new_frame = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
-                new_frame = new_frame.astype(np.uint8)
-                new_frame = cv2.applyColorMap(new_frame, cv2.COLORMAP_JET)
-                # new_frame = cv2.line(new_frame, self.line.line_points[0], self.line.line_points[1], (255, 0, 255), 3)
-                frames["depth"] = new_frame
+
         if frame_index % 10 == 0:
             self.remove_useless_persons(frame_index)
         return frames
@@ -249,8 +252,7 @@ class Pipeline:
         else:
             person_result = self.person_detector.detect_persons(frame)
             bib_result = self.bib_detector.detect_bib(frame)
-            # depth = self.line.model.infer_image(frame)
-            depth = None
+            depth = self.line.model.infer_image(frame)
         return self.treat_new_frame_result(frame, frame_index, person_result, bib_result, depth)
 
     def new_frames(self, frames, frames_indexes):
