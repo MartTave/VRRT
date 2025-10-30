@@ -12,6 +12,11 @@ Some packages are present on special repositories (paddlepaddle-gpu). The indexe
 
 The python version is `3.11`. It is pinned in the [.python-version](./.python-version) file.
 
+### Depth anything
+
+This project needs depth anything to work. You can download the model [here](https://github.com/DepthAnything/Depth-Anything-V2). By default, this project uses the DepthAnythinV2 Small model, but you can change this as you wish.
+
+Once downloaded, you can put it in this path : `./checkpoints/depth_anything_v2_vits.pth`
 
 ## Folder structure
 

@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import time
 
 import cv2
 from classes.bib_detector import PreTrainedModel
@@ -55,7 +56,9 @@ logger = get_colored_logger(__name__)
 
 
 if DETAIL_ANNOTATE and not ANNOTATE:
-    logger.warning("If DETAIL_ANNOTATE is True, ANNOTATE needs to be true too. correcting")
+    logger.warning(
+        "If DETAIL_ANNOTATE is True, ANNOTATE needs to be true too. correcting"
+    )
     ANNOTATE = True
 
 curr_path = ""
@@ -91,7 +94,7 @@ with open(PARAMETER_FILE) as file:
     parameters = json.loads("\n".join(file.readlines()))
 
 
-cap = get_capture(2, 1920, 1080, 30)
+cap = get_capture(4, 1920, 1080, 30)
 
 
 line_detector = ArrivalLine(line=parameters["line"])
@@ -112,7 +115,14 @@ height = parameters["crop"][1][1] - parameters["crop"][0][1]
 
 def sequential_pipe():
     i = 0
+    then = time.time()
     while True:
+        if i % 100 == 0:
+            now = time.time()
+            elapsed = now - then
+            then = now
+            print(f"FPS : {(100 / elapsed):.2f}")
+
         ret, frame = cap.read()
         if not ret:
             logger.info("End of recording reached")

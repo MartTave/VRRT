@@ -25,7 +25,9 @@ def check_bib_in_person(bib_box, person_boxes):
         return False, None
 
     for i, p_box in enumerate(person_boxes.xyxy):
-        if (p_box[0] <= bib_center_x <= p_box[2]) and (p_box[1] <= bib_center_y <= p_box[3]):
+        if (p_box[0] <= bib_center_x <= p_box[2]) and (
+            p_box[1] <= bib_center_y <= p_box[3]
+        ):
             return True, person_boxes.id[i]
     return False, None
 
@@ -53,7 +55,9 @@ class Bib:
         self.last_detected = None
 
     def new_detection(self, conf):
-        logger.debug(f"New detection for bib : {self.bib_text} at conf {self.curr_conf}")
+        logger.debug(
+            f"New detection for bib : {self.bib_text} at conf {self.curr_conf}"
+        )
         self.curr_conf += conf
         if self.curr_conf > self.conf_tresh and self.detected is False:
             self.detected = True
@@ -121,7 +125,9 @@ class Pipeline:
         self.persons = {
             k: v
             for k, v in self.persons.items()
-            if v.passed_line or len(v.bibs) > 0 or current_frame_index - v.last_detected < self.grace_not_detected
+            if v.passed_line
+            or len(v.bibs) > 0
+            or current_frame_index - v.last_detected < self.grace_not_detected
         }
 
     def keep_only_boxes(self, frame, boxes):
@@ -130,25 +136,35 @@ class Pipeline:
             boxes = boxes.cpu()
         for b in boxes:
             points = box_to_points(b)
-            cv2.rectangle(mask, points[0], points[1], (255, 255, 255), thickness=cv2.FILLED)
+            cv2.rectangle(
+                mask,
+                points[0],
+                points[1],
+                (255, 255, 255),
+                thickness=cv2.FILLED,
+            )
         masked_image = frame.copy()
         masked_image = cv2.bitwise_and(masked_image, mask)
         return masked_image
 
-    def treat_new_frame_result(self, frame, frame_index, person_result, bib_result, depth):
+    def treat_new_frame_result(
+        self, frame, frame_index, person_result, bib_result, depth
+    ):
         frames = {"annoted": frame.copy()}
 
         if person_result is None or len(person_result.boxes.xyxy) == 0:
             # If no person are detected, we can't do anyhting...
             return frames
 
-        if self.detail_annotate:
-            new_frame = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
+        if self.detail_annotate and False:
+            new_frame = (
+                (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
+            )
             new_frame = new_frame.astype(np.uint8)
             new_frame = cv2.applyColorMap(new_frame, cv2.COLORMAP_JET)
             # new_frame = cv2.line(new_frame, self.line.line_points[0], self.line.line_points[1], (255, 0, 255), 3)
             width = frame.shape[1]
-            frames["annoted"][:, width//2:] = new_frame[:, width//2:]
+            frames["annoted"][:, width // 2 :] = new_frame[:, width // 2 :]
 
         # Else, we treat the depth result
         # self.line.treat_depth(depth, person_result, frames["annoted"], self.annotate)
@@ -164,12 +180,16 @@ class Pipeline:
             self.persons[p_id].last_detected = frame_index
 
         if self.detail_annotate:
-            frames["person"] = self.keep_only_boxes(frame, person_result.boxes.xyxy)
+            frames["person"] = self.keep_only_boxes(
+                frame, person_result.boxes.xyxy
+            )
 
         if bib_result is not None:
             # If we found some bibs
             if self.detail_annotate:
-                frames["bib"] = self.keep_only_boxes(frame, bib_result.boxes.xyxy)
+                frames["bib"] = self.keep_only_boxes(
+                    frame, bib_result.boxes.xyxy
+                )
             for bib_box in bib_result.boxes.xyxy:
                 # For each bib box, we check if it is contained in a person box
                 # If so, we link the bib detection to the person box id
@@ -178,7 +198,10 @@ class Pipeline:
                     person_id = int(res[1])
                     if person_id is None:
                         continue
-                    cropped_bib = frame[bib_box[1].int() : bib_box[3].int(), bib_box[0].int() : bib_box[2].int()].copy()
+                    cropped_bib = frame[
+                        bib_box[1].int() : bib_box[3].int(),
+                        bib_box[0].int() : bib_box[2].int(),
+                    ].copy()
                     # We try to read the bib number
                     res = self.bib_reader.read_frame(cropped_bib)
                     if res is not None:
@@ -188,7 +211,9 @@ class Pipeline:
                         self.persons[person_id].detected_bib(bib, confidence)
         if self.annotate:
             # This is only to generated debug frames
-            for box, id in zip(person_result.boxes.xyxy, person_result.boxes.id, strict=False):
+            for box, id in zip(
+                person_result.boxes.xyxy, person_result.boxes.id, strict=False
+            ):
                 id = int(id)
                 curr_pers = self.persons[id]
                 color = (0, 0, 255)
@@ -202,18 +227,31 @@ class Pipeline:
 
                 x_center = box[0] + (box[2] - box[0]) / 2
                 track = track_history[id]
-                track.append((float(x_center), float(box[3])))  # x, y center point
+                track.append(
+                    (float(x_center), float(box[3]))
+                )  # x, y center point
                 if len(track) > 30:  # retain 30 tracks for 30 frames
                     track.pop(0)
 
                 points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
-                cv2.polylines(frames["annoted"], [points], isClosed=False, color=(255, 255, 0), thickness=3)
+                cv2.polylines(
+                    frames["annoted"],
+                    [points],
+                    isClosed=False,
+                    color=(255, 255, 0),
+                    thickness=3,
+                )
 
                 text_1 = f"Id : {id}"
                 text_2 = f"Bib {bib_text}"
                 # Draw box around person
                 person_points = box_to_points(box)
-                cv2.rectangle(frames["annoted"], person_points[0], person_points[1], color=color)
+                cv2.rectangle(
+                    frames["annoted"],
+                    person_points[0],
+                    person_points[1],
+                    color=color,
+                )
 
                 # Draw text for person info
                 cv2.putText(
@@ -225,12 +263,24 @@ class Pipeline:
                     color=(255, 0, 255),
                 )
                 cv2.putText(
-                    frames["annoted"], text_2, person_points[0], fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=bib_color, thickness=1
+                    frames["annoted"],
+                    text_2,
+                    person_points[0],
+                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                    fontScale=0.5,
+                    color=bib_color,
+                    thickness=1,
                 )
             if bib_result is not None:
                 for box in bib_result.boxes.xyxy.cpu():
                     points = box_to_points(box)
-                    cv2.rectangle(frames["annoted"], points[0], points[1], color=(255, 0, 255), thickness=4)
+                    cv2.rectangle(
+                        frames["annoted"],
+                        points[0],
+                        points[1],
+                        color=(255, 0, 255),
+                        thickness=4,
+                    )
             # cv2.line(frames["annoted"], self.line.line_points[0], self.line.line_points[1], (255, 255, 0), 3)
 
         if frame_index % 10 == 0:
@@ -241,33 +291,52 @@ class Pipeline:
         if parralel:
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 # Submit all three methods to the executor
-                future_person = executor.submit(self.person_detector.detect_persons, frame)
-                future_bib = executor.submit(self.bib_detector.detect_bib, frame)
-                future_depth = executor.submit(self.line.model.infer_image, frame)
+                future_person = executor.submit(
+                    self.person_detector.detect_persons, frame
+                )
+                future_bib = executor.submit(
+                    self.bib_detector.detect_bib, frame
+                )
+                # future_depth = executor.submit(self.line.model.infer_image, frame)
 
                 # Wait for all futures to complete and get results
                 person_result = future_person.result()
                 bib_result = future_bib.result()
-                depth = future_depth.result()
+                # depth = future_depth.result()
         else:
             person_result = self.person_detector.detect_persons(frame)
             bib_result = self.bib_detector.detect_bib(frame)
-            depth = self.line.model.infer_image(frame)
-        return self.treat_new_frame_result(frame, frame_index, person_result, bib_result, depth)
+            # depth = self.line.model.infer_image(frame)
+        return self.treat_new_frame_result(
+            frame, frame_index, person_result, bib_result, None
+        )
 
     def new_frames(self, frames, frames_indexes):
         with concurrent.futures.ThreadPoolExecutor() as executor:
             # Submit all three methods to the executor
-            future_person = executor.submit(self.person_detector.detect_persons_multiple, frames)
-            future_bib = executor.submit(self.bib_detector.detect_bib_multiple, frames)
+            future_person = executor.submit(
+                self.person_detector.detect_persons_multiple, frames
+            )
+            future_bib = executor.submit(
+                self.bib_detector.detect_bib_multiple, frames
+            )
             future_depth = executor.submit(self.line.model.infer_images, frames)
 
             # Wait for all futures to complete and get results
             person_results = future_person.result()
             bib_results = future_bib.result()
             depths = future_depth.result()
-        for frame, frame_index, person_result, bib_result, depth in zip(frames, frames_indexes, person_results, bib_results, depths, strict=True):
-            self.treat_new_frame_result(frame, frame_index, person_result, bib_result, depth)
+        for frame, frame_index, person_result, bib_result, depth in zip(
+            frames,
+            frames_indexes,
+            person_results,
+            bib_results,
+            depths,
+            strict=True,
+        ):
+            self.treat_new_frame_result(
+                frame, frame_index, person_result, bib_result, depth
+            )
 
     def clean_detections(self):
         # We pass the biggest number available as int32 in order to flush every person detected that has not passed the line and have no bib detected
