@@ -55,7 +55,9 @@ logger = get_colored_logger(__name__)
 
 
 if DETAIL_ANNOTATE and not ANNOTATE:
-    logger.warning("If DETAIL_ANNOTATE is True, ANNOTATE needs to be true too. correcting")
+    logger.warning(
+        "If DETAIL_ANNOTATE is True, ANNOTATE needs to be true too. correcting"
+    )
     ANNOTATE = True
 
 curr_path = ""
@@ -91,7 +93,7 @@ with open(PARAMETER_FILE) as file:
     parameters = json.loads("\n".join(file.readlines()))
 
 
-cap = get_capture(2, 1920, 1080, 30)
+cap = get_capture(4, 1920, 1080, 30)
 
 
 line_detector = ArrivalLine(line=parameters["line"])
